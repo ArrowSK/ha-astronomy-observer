@@ -17,6 +17,8 @@
       --warn: #f0c36a;
       --bad: #e77b7b;
       --accent: #9ec5ff;
+      --quality-bg: #101a2c;
+      --forecast-bg: #151a24;
     }
     * { box-sizing: border-box; }
     body {
@@ -39,6 +41,14 @@
       border-radius: 9px; padding: 8px 11px; cursor: pointer;
     }
     button:hover { border-color: #4d607f; }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .icon-button {
+      width: 38px; height: 38px; padding: 0; display: grid; place-items: center; font-size: 20px;
+      line-height: 1; font-weight: 500;
+    }
+    .icon-button.active { border-color: var(--accent); background: #1a2840; }
+    .icon-button.loading { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
     .card { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 13px; padding: 15px; }
     .hero { grid-column: span 4; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -50,13 +60,30 @@
     .score small { font-size: 20px; color: var(--muted); font-weight: 500; }
     .grade { font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .09em; }
     .good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
-    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .metric { background: var(--panel2); border: 1px solid transparent; border-radius: 9px; padding: 10px; min-height: 72px; cursor: pointer; }
-    .metric:hover, .metric:focus { border-color: #4d607f; outline: none; }
-    .metric.active { border-color: var(--accent); }
-    .metric .v { font-size: 21px; font-variant-numeric: tabular-nums; }
-    .metric .k { color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .metric-detail { margin-top: 10px; border: 1px solid var(--line); border-radius: 9px; background: #0f1624; padding: 10px 12px; }
+
+    .condition-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .condition-group { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; }
+    .condition-group.quality { background: var(--quality-bg); border-color: #32476a; }
+    .condition-group.forecast { background: var(--forecast-bg); }
+    .condition-group-title {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line);
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    }
+    .condition-group.quality .condition-group-title { color: var(--accent); }
+    .condition-group.forecast .condition-group-title { color: var(--muted); }
+    .condition-item + .condition-item { border-top: 1px solid var(--line); }
+    .condition-row {
+      width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; gap: 10px; align-items: center;
+      border: 0; border-radius: 0; padding: 10px 12px; background: transparent; text-align: left;
+    }
+    .condition-row:hover { background: rgba(255,255,255,.035); border-color: transparent; }
+    .condition-label { color: var(--text); }
+    .condition-value { font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; white-space: nowrap; }
+    .condition-chevron { color: var(--muted); transition: transform .15s ease; }
+    .condition-row[aria-expanded="true"] .condition-chevron { transform: rotate(90deg); }
+    .condition-detail { padding: 0 12px 11px; color: var(--muted); font-size: 12px; }
+    .condition-reference { margin-top: 6px; color: #b8c5da; }
+
     .target { display: grid; grid-template-columns: 30px minmax(0, 1fr) 58px; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
     .target:first-of-type { border-top: 0; padding-top: 0; }
     .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -69,14 +96,24 @@
     .night-score { text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
     .night-metrics { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
     .night-chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
-    .source-row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 6px 0; }
-    .source-row span:first-child { color: var(--muted); }
+
+    .source-row { display: grid; grid-template-columns: 12px 130px minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; }
+    .source-row + .source-row { border-top: 1px solid var(--line); }
+    .source-name { color: var(--muted); }
+    .source-value { overflow-wrap: anywhere; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,.04); }
+    .status-dot.good { background: var(--good); }
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.bad { background: var(--bad); }
+    .status-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); font-size: 11px; }
+    .status-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
     .status { margin: 32px auto; max-width: 520px; text-align: center; color: var(--muted); }
-    .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 4px; color: var(--muted); font-size: 12px; }
     .foot { margin-top: 14px; color: var(--muted); font-size: 12px; }
+    .note-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .note-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
     .note-form label, .setup-grid label { color: var(--muted); font-size: 12px; }
-    .note-form input, .note-form textarea, .setup-grid input, .setup-grid select {
+    .note-form input, .note-form textarea, .setup-grid input, .setup-grid select, .history-controls input, .history-controls select {
       width: 100%; margin-top: 4px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 8px; padding: 8px;
     }
     .note-form .wide { grid-column: 1 / -1; }
@@ -84,19 +121,25 @@
     .note-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
     .saved-note { padding: 9px 0; border-top: 1px solid var(--line); }
     .saved-note:first-child { border-top: 0; }
+    .history-panel { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+    .history-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; color: var(--text); font-weight: 620; }
+    .history-count { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .history-controls { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+
     .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .setup-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel2); }
     .setup-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
     details { margin-top: 10px; }
     summary { cursor: pointer; color: var(--muted); }
     code { color: var(--accent); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
     @media (max-width: 760px) {
       header { display: block; }
       .toolbar { justify-content: flex-start; margin-top: 12px; }
       .hero, .conditions, .targets, .outlook { grid-column: 1 / -1; }
-      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .note-form, .setup-grid { grid-template-columns: 1fr; }
-      .source-row { grid-template-columns: 1fr; gap: 0; }
+      .condition-groups, .note-form, .setup-grid, .history-controls { grid-template-columns: 1fr; }
+      .source-row { grid-template-columns: 12px minmax(90px, .6fr) minmax(0, 1fr); }
     }
   </style>
 </head>
@@ -107,10 +150,10 @@
       <h1>Astronomy Observer</h1>
       <p class="muted" id="where">Waiting for the first calculation…</p>
     </div>
-    <div class="toolbar">
-      <button id="setup-button">Setup</button>
-      <button id="refresh">Refresh now</button>
-      <button id="dashboard">Copy dashboard YAML</button>
+    <div class="toolbar" aria-label="Astronomy Observer actions">
+      <button id="notes-button" class="icon-button" aria-label="Observing notes" title="Observing notes">✎</button>
+      <button id="refresh" class="icon-button" aria-label="Refresh now" title="Refresh now">↻</button>
+      <button id="setup-button" class="icon-button" aria-label="Setup" title="Setup" aria-expanded="false">⚙</button>
     </div>
   </header>
 
@@ -150,12 +193,58 @@
         <div id="lp-status">Checking current sky-brightness source…</div>
         <p class="foot"><strong>Nothing is required here.</strong> The built-in World Atlas estimate follows the selected observer automatically and is already included in darkness-sensitive scoring.</p>
         <details>
-          <summary>When should I use the optional CSV?</summary>
-          <p class="foot">Only when you have a better local or higher-resolution grid than the built-in approximately 3-arcminute atlas. The optional CSV contains <code>latitude,longitude,artificial_mcd_m2</code> and overrides the built-in atlas when it has a usable nearby point. A measured SQM value or Home Assistant SQM sensor is also supported.</p>
+          <summary>Data reference and optional overrides</summary>
+          <p class="foot">Built-in reference: Falchi et al. (2016), <em>The New World Atlas of Artificial Night Sky Brightness</em>, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001. The runtime uses an approximately 3-arcminute derivative of the 2015 atlas. A measured SQM value, Home Assistant SQM sensor or higher-resolution local CSV can override it.</p>
         </details>
+      </div>
+      <div class="setup-box" style="grid-column:1/-1">
+        <h3>Dashboard preset</h3>
+        <p class="muted">The native dashboard preset is optional and normally only needed during setup.</p>
+        <div class="setup-actions"><button id="dashboard">Copy dashboard YAML</button><span class="muted" id="dashboard-status"></span></div>
       </div>
     </div>
     <div class="setup-actions"><button id="save-setup">Save and refresh</button><span class="muted" id="setup-status"></span></div>
+  </section>
+
+  <section id="notes-card" class="card notes" hidden style="margin-bottom:12px">
+    <div class="note-head">
+      <div>
+        <h2>Observing notes</h2>
+        <p class="muted" style="margin-bottom:12px">Save what the sky actually looked like. Entries stay in this app's local data and can be compared with the forecast later.</p>
+      </div>
+    </div>
+    <div class="note-form">
+      <label>SQM (mag/arcsec²)<input id="note-sqm" inputmode="decimal" type="number" min="10" max="25" step="0.01" placeholder="20.70"></label>
+      <label>Seeing (arcsec)<input id="note-seeing" inputmode="decimal" type="number" min="0.1" max="20" step="0.1" placeholder="1.8"></label>
+      <label>Transparency (1–5)<input id="note-transparency" inputmode="numeric" type="number" min="1" max="5" step="1" placeholder="4"></label>
+      <label>Limiting magnitude<input id="note-limiting" inputmode="decimal" type="number" min="-2" max="9" step="0.1" placeholder="5.9"></label>
+      <label class="wide">Notes<textarea id="note-text" maxlength="1000" placeholder="Thin haze low in the west after midnight."></textarea></label>
+    </div>
+    <div class="note-actions"><button id="save-note">Save observation</button><span class="muted" id="note-status"></span></div>
+    <details id="history-panel" class="history-panel">
+      <summary><span>Observation history</span><span id="history-count" class="history-count">0 entries</span></summary>
+      <div class="history-controls">
+        <label class="sr-only" for="history-search">Search observation history</label>
+        <input id="history-search" type="search" placeholder="Search date, location or notes" aria-label="Search observation history">
+        <label class="sr-only" for="history-filter">Filter observation history</label>
+        <select id="history-filter" aria-label="Filter observation history">
+          <option value="all">All entries</option>
+          <option value="sqm">With SQM</option>
+          <option value="seeing">With seeing</option>
+          <option value="transparency">With transparency</option>
+          <option value="limiting">With limiting magnitude</option>
+          <option value="notes">With text notes</option>
+        </select>
+        <label class="sr-only" for="history-period">Observation history period</label>
+        <select id="history-period" aria-label="Observation history period">
+          <option value="all">All available history</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+      <div id="observation-list" style="margin-top:8px"></div>
+    </details>
   </section>
 
   <div id="loading" class="status">The first calculation normally takes a little longer while current source data are collected.</div>
@@ -174,9 +263,7 @@
 
     <section class="card conditions">
       <h2>Conditions in the best window</h2>
-      <div class="metrics" id="metrics"></div>
-      <div id="metric-detail" class="metric-detail" hidden></div>
-      <div class="foot" id="raw"></div>
+      <div id="condition-groups" class="condition-groups"></div>
     </section>
 
     <section class="card targets">
@@ -189,24 +276,15 @@
       <div id="night-list"></div>
     </section>
 
-    <section class="card notes">
-      <h2>Observing notes</h2>
-      <p class="muted" style="margin-bottom:12px">Save what the sky actually looked like. Entries stay in this app's local data and can be compared with the forecast later.</p>
-      <div class="note-form">
-        <label>SQM (mag/arcsec²)<input id="note-sqm" inputmode="decimal" type="number" min="10" max="25" step="0.01" placeholder="20.70"></label>
-        <label>Seeing (arcsec)<input id="note-seeing" inputmode="decimal" type="number" min="0.1" max="20" step="0.1" placeholder="1.8"></label>
-        <label>Transparency (1–5)<input id="note-transparency" inputmode="numeric" type="number" min="1" max="5" step="1" placeholder="4"></label>
-        <label>Limiting magnitude<input id="note-limiting" inputmode="decimal" type="number" min="-2" max="9" step="0.1" placeholder="5.9"></label>
-        <label class="wide">Notes<textarea id="note-text" maxlength="1000" placeholder="Thin haze low in the west after midnight."></textarea></label>
-      </div>
-      <div class="note-actions"><button id="save-note">Save observation</button><span class="muted" id="note-status"></span></div>
-      <div id="observation-list" style="margin-top:14px"></div>
-    </section>
-
     <section class="card sources">
       <h2>Source status</h2>
       <div id="source-list"></div>
-      <div class="foot">A source may be cached when the live service is unavailable. Unknown values stay unknown and reduce the confidence score.</div>
+      <div class="status-legend" aria-label="Source status legend">
+        <span><i class="status-dot good"></i>current or local</span>
+        <span><i class="status-dot warn"></i>cached, fallback or disabled</span>
+        <span><i class="status-dot bad"></i>unavailable or failed</span>
+      </div>
+      <div class="foot">Unknown values stay unknown and reduce the confidence score rather than being guessed.</div>
     </section>
   </div>
 </main>
@@ -217,47 +295,88 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const localTime = value => value ? new Date(value).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
 const grade = score => score >= 80 ? ['Excellent','good'] : score >= 70 ? ['Very good','good'] : score >= 55 ? ['Usable','warn'] : score >= 35 ? ['Poor','warn'] : ['Very poor','bad'];
 let setupLoaded = false;
+let notesLoaded = false;
+let observationRows = [];
+let currentSnapshot = null;
 
-const metricHelp = {
-  deep: ['Deep sky', 'Combines cloud, transparency, darkness, Moon interference, wind and local sky brightness. It is the most relevant condition score for galaxies, nebulae and faint clusters.'],
-  planetary: ['Planetary', 'Weights clear sky and the seeing estimate more heavily. Transparency and darkness matter less for bright planets than for faint deep-sky targets.'],
-  imaging: ['Imaging', 'Balances cloud, transparency, estimated seeing, darkness and wind. It is a planning score rather than a mount or equipment safety limit.'],
-  clear: ['Clear-sky factor', 'A nonlinear optical-sky factor derived from total cloud plus low and high cloud layers. High cirrus is penalised even when a normal weather forecast may still look fairly clear.'],
-  transparency: ['Transparency', 'Estimated atmospheric clarity using visibility, aerosol optical depth, humidity, fine particles and dew conditions when available.'],
-  seeing: ['Seeing estimate', 'A relative estimate based mainly on upper-atmosphere and surface wind. It is not a measured arcsecond seeing value.'],
-  darkness: ['Darkness', 'Combines solar twilight with local sky brightness. By default that sky brightness comes from the built-in World Atlas lookup at the selected observer location.'],
-  moon: ['Moon interference', 'How strongly the Moon is expected to brighten the sky in the best observing window. Target-specific Moon separation is handled again when individual objects are ranked.'],
-  cloud: ['Cloud cover', 'Forecast total cloud cover at the representative time of the best window. Low, middle and high cloud layers are shown below the tiles.'],
-  visibility: ['Visibility', 'Forecast horizontal visibility. It is useful as one proxy for haze and poor transparency, but it is not an astronomical extinction measurement.'],
-  aod: ['Aerosol optical depth', 'Forecast aerosol optical depth near 550 nm. Lower values generally mean less aerosol haze and better transparency.'],
-  dew: ['Dew margin', 'Air temperature minus dew point. A small margin means condensation is more likely on optics and equipment.'],
-  sky: ['Sky brightness', 'Normally estimated automatically from the selected location using the bundled World Atlas derivative. A fixed SQM value, Home Assistant SQM sensor or higher-resolution local grid can override it.']
+const conditionHelp = {
+  deep: 'Combines cloud, transparency, darkness, Moon interference, wind and local sky brightness. It is the most relevant condition score for galaxies, nebulae and faint clusters.',
+  planetary: 'Weights clear sky and the seeing estimate more heavily. Transparency and darkness matter less for bright planets than for faint deep-sky targets.',
+  imaging: 'Balances cloud, transparency, estimated seeing, darkness and wind. It is a planning score rather than a mount or equipment safety limit.',
+  clear: 'A nonlinear optical-sky factor derived from total cloud plus low and high cloud layers. High cirrus is penalised even when a normal weather forecast may still look fairly clear.',
+  transparency: 'Estimated atmospheric clarity using visibility, aerosol optical depth, humidity, fine particles and dew conditions when available.',
+  seeing: 'A relative estimate based mainly on upper-atmosphere and surface wind. It is not a measured arcsecond seeing value.',
+  darkness: 'Combines solar twilight with local sky brightness. By default that sky brightness comes from the built-in World Atlas lookup at the selected observer location.',
+  moon: 'How strongly the Moon is expected to brighten the sky in the best observing window. Target-specific Moon separation is handled again when individual objects are ranked.',
+  cloud: 'Forecast total cloud cover at the representative time of the best window.',
+  cloud_low: 'Forecast low-level cloud cover. Low cloud is usually strongly obstructive for visual observing and imaging.',
+  cloud_mid: 'Forecast mid-level cloud cover. Broken mid-level cloud can make otherwise good windows unreliable.',
+  cloud_high: 'Forecast high-level cloud cover. Thin cirrus can reduce contrast and transparency even when the sky does not look conventionally overcast.',
+  visibility: 'Forecast horizontal visibility. It is useful as one proxy for haze and poor transparency, but it is not an astronomical extinction measurement.',
+  aod: 'Forecast aerosol optical depth near 550 nm. Lower values generally mean less aerosol haze and better transparency.',
+  wind: 'Forecast surface wind at the representative time. Stronger wind can affect comfort and equipment stability.',
+  jet: 'Forecast wind near 200 hPa, used as one input to the relative seeing estimate. It is not a direct seeing measurement.',
+  dew: 'Air temperature minus dew point. A small margin means condensation is more likely on optics and equipment.',
+  moon_illumination: 'Illuminated fraction of the Moon during the representative time. Its actual observing impact also depends on Moon altitude and target separation.',
+  sky: 'Estimated moonless zenith sky brightness at the selected location. Higher SQM values mean a darker sky. The location estimate is already included in darkness-sensitive scores.'
 };
 
-function metric(label, value, key) {
-  return `<div class="metric" role="button" tabindex="0" data-detail="${esc(key)}"><div class="v">${esc(value)}</div><div class="k">${esc(label)}</div></div>`;
+function conditionDetailHtml(key) {
+  let html = `<div>${esc(conditionHelp[key] || 'No additional explanation is available.')}</div>`;
+  if (key === 'sky' && currentSnapshot) {
+    const sky = currentSnapshot.sky_brightness || {};
+    const parts = [`Source: ${sky.source || 'unknown'}`];
+    if (sky.artificial_mcd_m2 != null) parts.push(`artificial zenith luminance ${n(sky.artificial_mcd_m2,3,' mcd/m²')}`);
+    if (sky.nearest_distance_km != null) parts.push(`atlas cell centre ${n(sky.nearest_distance_km,1,' km')} away`);
+    html += `<div class="condition-reference">${esc(parts.join(' · '))}</div>`;
+    html += '<div class="condition-reference">Reference: Falchi et al. (2016), The New World Atlas of Artificial Night Sky Brightness, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001.</div>';
+  }
+  return html;
 }
 
-function bindMetricDetails() {
-  const detail = $('metric-detail');
-  const show = tile => {
-    document.querySelectorAll('.metric').forEach(item => item.classList.remove('active'));
-    tile.classList.add('active');
-    const entry = metricHelp[tile.dataset.detail];
-    if (!entry) return;
-    detail.innerHTML = `<strong>${esc(entry[0])}</strong><div class="muted" style="margin-top:3px">${esc(entry[1])}</div>`;
-    detail.hidden = false;
-  };
-  document.querySelectorAll('.metric').forEach(tile => {
-    tile.addEventListener('click', () => show(tile));
-    tile.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(tile); }
+function conditionItem(label, value, key) {
+  return `<div class="condition-item">
+    <button class="condition-row" type="button" data-detail="${esc(key)}" aria-expanded="false">
+      <span class="condition-label">${esc(label)}</span>
+      <span class="condition-value">${esc(value)}</span>
+      <span class="condition-chevron" aria-hidden="true">›</span>
+    </button>
+    <div class="condition-detail" hidden></div>
+  </div>`;
+}
+
+function bindConditionDetails() {
+  document.querySelectorAll('.condition-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const item = row.closest('.condition-item');
+      const detail = item.querySelector('.condition-detail');
+      const opening = detail.hidden;
+      document.querySelectorAll('.condition-detail').forEach(other => { other.hidden = true; });
+      document.querySelectorAll('.condition-row').forEach(other => { other.setAttribute('aria-expanded', 'false'); });
+      if (opening) {
+        detail.innerHTML = conditionDetailHtml(row.dataset.detail);
+        detail.hidden = false;
+        row.setAttribute('aria-expanded', 'true');
+      }
     });
   });
 }
 
+function sourceStatusKind(key, value, snapshot) {
+  const text = String(value || '').toLowerCase();
+  if (!text || /(unknown|unavailable|failed|error|no value|no coverage)/.test(text)) return 'bad';
+  if (key === 'weather' && snapshot?.weather_stale) return 'warn';
+  if (/(cached|stale|fallback|disabled|limited|degraded)/.test(text)) return 'warn';
+  return 'good';
+}
+
+function sourceStatusTitle(kind) {
+  return kind === 'good' ? 'Current or local' : kind === 'warn' ? 'Cached, fallback or disabled' : 'Unavailable or failed';
+}
+
 function render(snapshot) {
   if (!snapshot) return;
+  currentSnapshot = snapshot;
   $('loading').hidden = true;
   $('content').hidden = false;
   $('where').textContent = `${snapshot.location.label} · ${snapshot.weather_source}${snapshot.weather_stale ? ' · cached weather' : ''} · updated ${localTime(snapshot.generated_at)}`;
@@ -271,31 +390,33 @@ function render(snapshot) {
   const c = snapshot.conditions;
   const w = snapshot.best_window_context || {};
   const skyValue = snapshot.sky_brightness.sqm_mag_arcsec2 == null ? 'Unavailable' : `${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)} SQM`;
-  $('metrics').innerHTML = [
-    metric('Deep sky', n(c.deep_sky, 0, '/100'), 'deep'),
-    metric('Planetary', n(c.planetary, 0, '/100'), 'planetary'),
-    metric('Imaging', n(c.imaging, 0, '/100'), 'imaging'),
-    metric('Clear-sky factor', n(c.cloud, 0, '/100'), 'clear'),
-    metric('Transparency', n(c.transparency, 0, '/100'), 'transparency'),
-    metric('Seeing estimate', n(c.seeing_estimate, 0, '/100'), 'seeing'),
-    metric('Darkness', n(c.darkness, 0, '/100'), 'darkness'),
-    metric('Moon interference', n(c.moon_interference, 0, '/100'), 'moon'),
-    metric('Cloud cover', n(w.cloud_total_pct, 0, '%'), 'cloud'),
-    metric('Visibility', n(w.visibility_km, 1, ' km'), 'visibility'),
-    metric('AOD 550 nm', n(w.aerosol_optical_depth, 3), 'aod'),
-    metric('Dew margin', n(c.dew_margin_c, 1, ' °C'), 'dew'),
-    metric('Sky brightness', skyValue, 'sky'),
+  const quality = [
+    conditionItem('Deep-sky observing', n(c.deep_sky, 0, '/100'), 'deep'),
+    conditionItem('Planetary observing', n(c.planetary, 0, '/100'), 'planetary'),
+    conditionItem('Imaging', n(c.imaging, 0, '/100'), 'imaging'),
+    conditionItem('Clear-sky factor', n(c.cloud, 0, '/100'), 'clear'),
+    conditionItem('Transparency', n(c.transparency, 0, '/100'), 'transparency'),
+    conditionItem('Seeing estimate', n(c.seeing_estimate, 0, '/100'), 'seeing'),
+    conditionItem('Darkness', n(c.darkness, 0, '/100'), 'darkness'),
+    conditionItem('Moon interference', n(c.moon_interference, 0, '/100'), 'moon'),
   ].join('');
-  bindMetricDetails();
-
-  $('raw').innerHTML = [
-    `<span class="pill">Low cloud ${n(w.cloud_low_pct,0,'%')}</span>`,
-    `<span class="pill">Mid cloud ${n(w.cloud_mid_pct,0,'%')}</span>`,
-    `<span class="pill">High cloud ${n(w.cloud_high_pct,0,'%')}</span>`,
-    `<span class="pill">Wind ${n(w.wind_speed_kmh,1,' km/h')}</span>`,
-    `<span class="pill">200 hPa wind ${n(w.wind_200hpa_kmh,0,' km/h')}</span>`,
-    `<span class="pill">Moon ${n(w.moon_illumination_pct,0,'%')}</span>`,
+  const forecast = [
+    conditionItem('Cloud cover', n(w.cloud_total_pct, 0, '%'), 'cloud'),
+    conditionItem('Low cloud', n(w.cloud_low_pct, 0, '%'), 'cloud_low'),
+    conditionItem('Mid cloud', n(w.cloud_mid_pct, 0, '%'), 'cloud_mid'),
+    conditionItem('High cloud', n(w.cloud_high_pct, 0, '%'), 'cloud_high'),
+    conditionItem('Visibility', n(w.visibility_km, 1, ' km'), 'visibility'),
+    conditionItem('AOD 550 nm', n(w.aerosol_optical_depth, 3), 'aod'),
+    conditionItem('Surface wind', n(w.wind_speed_kmh, 1, ' km/h'), 'wind'),
+    conditionItem('200 hPa wind', n(w.wind_200hpa_kmh, 0, ' km/h'), 'jet'),
+    conditionItem('Dew margin', n(c.dew_margin_c, 1, ' °C'), 'dew'),
+    conditionItem('Moon illumination', n(w.moon_illumination_pct, 0, '%'), 'moon_illumination'),
+    conditionItem('Sky brightness / light pollution', skyValue, 'sky'),
   ].join('');
+  $('condition-groups').innerHTML = `
+    <div class="condition-group quality"><div class="condition-group-title">Observing quality</div>${quality}</div>
+    <div class="condition-group forecast"><div class="condition-group-title">Forecast conditions</div>${forecast}</div>`;
+  bindConditionDetails();
 
   $('target-list').innerHTML = snapshot.recommendations.length ? snapshot.recommendations.map((r, i) => `
     <div class="target">
@@ -330,7 +451,10 @@ function render(snapshot) {
   }
 
   const sources = snapshot.source_status || {};
-  $('source-list').innerHTML = Object.keys(sources).sort().map(key => `<div class="source-row"><span>${esc(key.replaceAll('_',' '))}</span><span>${esc(sources[key])}</span></div>`).join('');
+  $('source-list').innerHTML = Object.keys(sources).sort().map(key => {
+    const kind = sourceStatusKind(key, sources[key], snapshot);
+    return `<div class="source-row"><span class="status-dot ${kind}" title="${esc(sourceStatusTitle(kind))}"></span><span class="source-name">${esc(key.replaceAll('_',' '))}</span><span class="source-value">${esc(sources[key])}</span></div>`;
+  }).join('');
 
   if (snapshot.sky_brightness.sqm_mag_arcsec2 == null) {
     $('lp-status').innerHTML = `<span class="warn">Sky-brightness estimate is unavailable at this location.</span> Source: ${esc(snapshot.sky_brightness.source || 'unknown')}.`;
@@ -370,21 +494,54 @@ async function loadSetup() {
   }
 }
 
+function observationMatchesFilter(row, filter) {
+  if (filter === 'sqm') return row.sqm != null;
+  if (filter === 'seeing') return row.seeing_arcsec != null;
+  if (filter === 'transparency') return row.transparency != null;
+  if (filter === 'limiting') return row.limiting_magnitude != null;
+  if (filter === 'notes') return Boolean(String(row.notes || '').trim());
+  return true;
+}
+
+function renderObservationHistory() {
+  const query = $('history-search').value.trim().toLowerCase();
+  const filter = $('history-filter').value;
+  const period = $('history-period').value;
+  const now = Date.now();
+  const rows = observationRows.filter(row => {
+    if (!observationMatchesFilter(row, filter)) return false;
+    if (period !== 'all') {
+      const recorded = new Date(row.recorded_at).getTime();
+      const maxAge = Number(period) * 86400000;
+      if (!Number.isFinite(recorded) || now - recorded > maxAge) return false;
+    }
+    if (!query) return true;
+    const searchable = [
+      new Date(row.recorded_at).toLocaleString(), row.location, row.notes,
+      row.sqm, row.seeing_arcsec, row.transparency, row.limiting_magnitude, row.forecast_score
+    ].filter(value => value != null).join(' ').toLowerCase();
+    return searchable.includes(query);
+  });
+  $('history-count').textContent = rows.length === observationRows.length ? `${rows.length} entries` : `${rows.length} of ${observationRows.length}`;
+  $('observation-list').innerHTML = rows.length ? rows.map(row => {
+    const details = [
+      row.sqm == null ? null : `SQM ${n(row.sqm,2)}`,
+      row.seeing_arcsec == null ? null : `seeing ${n(row.seeing_arcsec,1,'″')}`,
+      row.transparency == null ? null : `transparency ${row.transparency}/5`,
+      row.limiting_magnitude == null ? null : `NELM ${n(row.limiting_magnitude,1)}`,
+      row.forecast_score == null ? null : `forecast ${n(row.forecast_score,0,'/100')}`,
+    ].filter(Boolean).join(' · ');
+    return `<div class="saved-note"><div><strong>${esc(new Date(row.recorded_at).toLocaleString())}</strong> · ${esc(row.location)}</div><div class="target-meta">${esc(details || 'field note')}</div>${row.notes ? `<div style="margin-top:3px">${esc(row.notes)}</div>` : ''}</div>`;
+  }).join('') : '<div class="muted" style="padding:10px 0">No observations match the current search and filters.</div>';
+}
+
 async function loadObservations() {
   try {
     const response = await fetch('api/observations', {cache:'no-store'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const rows = await response.json();
-    $('observation-list').innerHTML = rows.length ? rows.slice(0, 8).map(row => {
-      const details = [
-        row.sqm == null ? null : `SQM ${n(row.sqm,2)}`,
-        row.seeing_arcsec == null ? null : `seeing ${n(row.seeing_arcsec,1,'″')}`,
-        row.transparency == null ? null : `transparency ${row.transparency}/5`,
-        row.limiting_magnitude == null ? null : `NELM ${n(row.limiting_magnitude,1)}`,
-        row.forecast_score == null ? null : `forecast ${n(row.forecast_score,0,'/100')}`,
-      ].filter(Boolean).join(' · ');
-      return `<div class="saved-note"><div><strong>${esc(new Date(row.recorded_at).toLocaleString())}</strong> · ${esc(row.location)}</div><div class="target-meta">${esc(details || 'field note')}</div>${row.notes ? `<div style="margin-top:3px">${esc(row.notes)}</div>` : ''}</div>`;
-    }).join('') : '<div class="muted">No observing notes saved yet.</div>';
+    observationRows = await response.json();
+    notesLoaded = true;
+    renderObservationHistory();
   } catch (error) {
     $('observation-list').innerHTML = `<div class="muted">Unable to read observing notes: ${esc(error.message)}</div>`;
   }
@@ -401,8 +558,18 @@ async function load() {
 }
 
 $('setup-button').addEventListener('click', async () => {
-  $('setup-card').hidden = !$('setup-card').hidden;
-  if (!$('setup-card').hidden && !setupLoaded) await loadSetup();
+  const opening = $('setup-card').hidden;
+  $('setup-card').hidden = !opening;
+  $('setup-button').classList.toggle('active', opening);
+  $('setup-button').setAttribute('aria-expanded', String(opening));
+  if (opening && !setupLoaded) await loadSetup();
+});
+
+$('notes-button').addEventListener('click', async () => {
+  const opening = $('notes-card').hidden;
+  $('notes-card').hidden = !opening;
+  $('notes-button').classList.toggle('active', opening);
+  if (opening && !notesLoaded) await loadObservations();
 });
 
 $('save-setup').addEventListener('click', async () => {
@@ -418,7 +585,10 @@ $('save-setup').addEventListener('click', async () => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     $('setup-status').textContent = 'Saved. Recalculating…';
-    setTimeout(async () => { await load(); $('setup-status').textContent = 'Saved'; }, 2200);
+    $('setup-card').hidden = true;
+    $('setup-button').classList.remove('active');
+    $('setup-button').setAttribute('aria-expanded', 'false');
+    setTimeout(async () => { await load(); $('setup-status').textContent = ''; }, 2200);
   } catch (error) {
     $('setup-status').textContent = error.message;
   } finally {
@@ -428,19 +598,30 @@ $('save-setup').addEventListener('click', async () => {
 
 $('refresh').addEventListener('click', async () => {
   $('refresh').disabled = true;
-  $('refresh').textContent = 'Refreshing…';
+  $('refresh').classList.add('loading');
+  $('refresh').setAttribute('aria-busy', 'true');
   try { await fetch('api/refresh', {method:'POST'}); } finally {
-    setTimeout(() => { $('refresh').disabled = false; $('refresh').textContent = 'Refresh now'; load(); }, 1800);
+    setTimeout(() => {
+      $('refresh').disabled = false;
+      $('refresh').classList.remove('loading');
+      $('refresh').removeAttribute('aria-busy');
+      load();
+    }, 1800);
   }
 });
 
 $('dashboard').addEventListener('click', async () => {
-  const response = await fetch('api/dashboard', {cache:'no-store'});
-  const text = await response.text();
-  await navigator.clipboard.writeText(text);
-  const old = $('dashboard').textContent;
-  $('dashboard').textContent = 'Copied';
-  setTimeout(() => $('dashboard').textContent = old, 1500);
+  $('dashboard-status').textContent = 'Copying…';
+  try {
+    const response = await fetch('api/dashboard', {cache:'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const text = await response.text();
+    await navigator.clipboard.writeText(text);
+    $('dashboard-status').textContent = 'Copied';
+    setTimeout(() => $('dashboard-status').textContent = '', 1600);
+  } catch (error) {
+    $('dashboard-status').textContent = `Unable to copy: ${error.message}`;
+  }
 });
 
 $('save-note').addEventListener('click', async () => {
@@ -467,8 +648,11 @@ $('save-note').addEventListener('click', async () => {
   }
 });
 
+['history-search', 'history-filter', 'history-period'].forEach(id => {
+  $(id).addEventListener(id === 'history-search' ? 'input' : 'change', renderObservationHistory);
+});
+
 load();
-loadObservations();
 setInterval(load, 60000);
 </script>
 </body>
