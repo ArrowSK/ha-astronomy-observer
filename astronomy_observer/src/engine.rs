@@ -389,7 +389,7 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     {
         candidates.push(recommendation);
     }
-    let recommendations = select_recommendations(candidates, 10);
+    let recommendations = targets::select_diverse(select_recommendations(candidates, 10), 10);
 
     let mut source_status = HashMap::new();
     source_status.insert("location".to_string(), location.source.clone());
