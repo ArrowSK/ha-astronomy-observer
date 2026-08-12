@@ -103,8 +103,8 @@ fn dew_factor(w: &HourlyWeather) -> (f64, Option<f64>, f64) {
 
 fn transparency_factor(w: &HourlyWeather, dew: f64) -> (f64, f64) {
     let mut parts = Vec::new();
-    let mut quality = 0.0;
-    let mut qweight = 0.0;
+    let mut quality: f64 = 0.0;
+    let mut qweight: f64 = 0.0;
     if let Some(v) = w.visibility_km {
         parts.push((f01((v - 3.0) / 27.0), 0.35));
         quality += 0.35;
@@ -141,8 +141,8 @@ fn transparency_factor(w: &HourlyWeather, dew: f64) -> (f64, f64) {
 }
 
 fn seeing_factor(w: &HourlyWeather) -> (f64, f64) {
-    let mut score = 1.0;
-    let mut known = 0.0;
+    let mut score: f64 = 1.0;
+    let mut known: f64 = 0.0;
     if let Some(v) = w.wind_200hpa_kmh {
         score *= if v <= 35.0 {
             1.0
@@ -342,7 +342,7 @@ pub fn best_window(
         let vals: Vec<_> = candidates
             .iter()
             .skip(i)
-            .take_while(|(t, _)| **t <= t0 + Duration::hours(2))
+            .take_while(|(t, _)| *t <= t0 + Duration::hours(2))
             .collect();
         if vals.len() < 2 {
             continue;

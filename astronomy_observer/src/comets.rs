@@ -1,4 +1,3 @@
-use crate::astro;
 use crate::config::AppConfig;
 use crate::coordinates::{
     alt_az_from_j2000, angular_separation_deg, deg_to_rad, norm_deg, rad_to_deg,
