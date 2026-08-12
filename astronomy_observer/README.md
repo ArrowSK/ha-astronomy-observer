@@ -6,6 +6,6 @@ It is built for observers who want to see why a night scores well or badly. Clou
 
 After the first successful refresh, open the Astronomy Observer panel and press **Setup** to choose the observer and a simple lowest-useful-altitude horizon. The advanced directional horizon remains available for sites that genuinely need it.
 
-No light-pollution CSV is required. Sky brightness can remain unknown, or you can later add a fixed SQM value, a Home Assistant SQM sensor or an optional Falchi atlas grid.
+Light pollution is automatic. Astronomy Observer follows the selected Home Assistant person or Home location and reads the bundled approximately 3-arcminute World Atlas grid locally. That sky-brightness estimate is included in the main condition score without any CSV or external light-pollution service. A fixed SQM value, Home Assistant SQM sensor or higher-resolution local CSV can still override the built-in estimate.
 
-Open the app's **Documentation** tab for the full setup guide, entity names, dashboard preset, light-pollution options and scoring method.
+Open the app's **Documentation** tab for the full setup guide, entity names, dashboard preset, light-pollution details and scoring method.

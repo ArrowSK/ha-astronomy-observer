@@ -148,10 +148,10 @@
       <div class="setup-box" style="grid-column:1/-1">
         <h3>Light pollution</h3>
         <div id="lp-status">Checking current sky-brightness source…</div>
-        <p class="foot"><strong>Nothing is required here.</strong> Astronomy Observer works without a CSV. If no SQM value or atlas grid is configured, light-pollution-sensitive scoring is deliberately conservative and confidence is lower.</p>
+        <p class="foot"><strong>Nothing is required here.</strong> The built-in World Atlas estimate follows the selected observer automatically and is already included in darkness-sensitive scoring.</p>
         <details>
-          <summary>When should I use the CSV?</summary>
-          <p class="foot">Only when you want the Falchi atlas to supply local sky brightness and nearby darker-point searches. The optional CSV must contain <code>latitude,longitude,artificial_mcd_m2</code>. If you do not already have such a file, leave this alone. A fixed SQM value or a Home Assistant SQM sensor is simpler for a regular observing site.</p>
+          <summary>When should I use the optional CSV?</summary>
+          <p class="foot">Only when you have a better local or higher-resolution grid than the built-in approximately 3-arcminute atlas. The optional CSV contains <code>latitude,longitude,artificial_mcd_m2</code> and overrides the built-in atlas when it has a usable nearby point. A measured SQM value or Home Assistant SQM sensor is also supported.</p>
         </details>
       </div>
     </div>
@@ -225,13 +225,13 @@ const metricHelp = {
   clear: ['Clear-sky factor', 'A nonlinear optical-sky factor derived from total cloud plus low and high cloud layers. High cirrus is penalised even when a normal weather forecast may still look fairly clear.'],
   transparency: ['Transparency', 'Estimated atmospheric clarity using visibility, aerosol optical depth, humidity, fine particles and dew conditions when available.'],
   seeing: ['Seeing estimate', 'A relative estimate based mainly on upper-atmosphere and surface wind. It is not a measured arcsecond seeing value.'],
-  darkness: ['Darkness', 'Combines solar twilight with local sky-brightness information when available. A missing light-pollution input lowers confidence rather than inventing a local value.'],
+  darkness: ['Darkness', 'Combines solar twilight with local sky brightness. By default that sky brightness comes from the built-in World Atlas lookup at the selected observer location.'],
   moon: ['Moon interference', 'How strongly the Moon is expected to brighten the sky in the best observing window. Target-specific Moon separation is handled again when individual objects are ranked.'],
   cloud: ['Cloud cover', 'Forecast total cloud cover at the representative time of the best window. Low, middle and high cloud layers are shown below the tiles.'],
   visibility: ['Visibility', 'Forecast horizontal visibility. It is useful as one proxy for haze and poor transparency, but it is not an astronomical extinction measurement.'],
   aod: ['Aerosol optical depth', 'Forecast aerosol optical depth near 550 nm. Lower values generally mean less aerosol haze and better transparency.'],
   dew: ['Dew margin', 'Air temperature minus dew point. A small margin means condensation is more likely on optics and equipment.'],
-  sky: ['Sky brightness', 'Uses a fixed SQM value, a Home Assistant SQM sensor or an optional Falchi atlas grid. If none is configured, the value stays unknown and the score is conservative.']
+  sky: ['Sky brightness', 'Normally estimated automatically from the selected location using the bundled World Atlas derivative. A fixed SQM value, Home Assistant SQM sensor or higher-resolution local grid can override it.']
 };
 
 function metric(label, value, key) {
@@ -270,7 +270,7 @@ function render(snapshot) {
 
   const c = snapshot.conditions;
   const w = snapshot.best_window_context || {};
-  const skyValue = snapshot.sky_brightness.sqm_mag_arcsec2 == null ? 'Not configured' : `${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)} SQM`;
+  const skyValue = snapshot.sky_brightness.sqm_mag_arcsec2 == null ? 'Unavailable' : `${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)} SQM`;
   $('metrics').innerHTML = [
     metric('Deep sky', n(c.deep_sky, 0, '/100'), 'deep'),
     metric('Planetary', n(c.planetary, 0, '/100'), 'planetary'),
@@ -333,7 +333,7 @@ function render(snapshot) {
   $('source-list').innerHTML = Object.keys(sources).sort().map(key => `<div class="source-row"><span>${esc(key.replaceAll('_',' '))}</span><span>${esc(sources[key])}</span></div>`).join('');
 
   if (snapshot.sky_brightness.sqm_mag_arcsec2 == null) {
-    $('lp-status').innerHTML = '<span class="warn">No local sky-brightness input is configured.</span> This is optional.';
+    $('lp-status').innerHTML = `<span class="warn">Sky-brightness estimate is unavailable at this location.</span> Source: ${esc(snapshot.sky_brightness.source || 'unknown')}.`;
   } else {
     $('lp-status').innerHTML = `Using <strong>${esc(snapshot.sky_brightness.source)}</strong> · ${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)} mag/arcsec²`;
   }

@@ -20,13 +20,17 @@ Upstream: https://github.com/mattiaverga/OpenNGC
 
 ## World Atlas of Artificial Night Sky Brightness
 
-Astronomy Observer can read user-prepared grids derived from:
+Astronomy Observer includes a compact derivative of:
 
 Falchi, F. et al. (2016), *The New World Atlas of Artificial Night Sky Brightness*, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001.
 
-The GFZ dataset is distributed under CC BY-NC 4.0. It is not bundled in this repository or downloaded by the app. Any grid derived from it remains subject to the dataset licence and attribution requirements.
+The GFZ dataset is distributed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). The bundled `world_atlas_3min.bin` remains subject to that licence and is not relicensed under PolyForm Noncommercial.
+
+The official approximately 30-arcsecond 2015 artificial-zenith-luminance raster is averaged to an approximately 3-arcminute global lookup grid and stored in a compact logarithmic unsigned 16-bit representation. The bundled metadata records the transformation and checksum. See `astronomy_observer/data/WORLD_ATLAS_NOTICE.md` and `docs/LIGHT_POLLUTION.md` for details and attribution.
 
 Dataset: https://dataservices.gfz-potsdam.de/contact/showshort.php?id=escidoc:1541893
+
+Licence: https://creativecommons.org/licenses/by-nc/4.0/
 
 ## Open-Meteo
 

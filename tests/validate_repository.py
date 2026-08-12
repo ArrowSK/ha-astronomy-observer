@@ -2,7 +2,10 @@
 """Static repository checks that do not require Home Assistant or network access."""
 from __future__ import annotations
 
+import hashlib
+import json
 import re
+import struct
 import sys
 from pathlib import Path
 
@@ -50,6 +53,10 @@ def required_paths() -> None:
         APP / "web/index.html",
         APP / "dashboard/astronomy-dashboard.yaml",
         APP / "translations/en.yaml",
+        APP / "scripts/build_global_atlas.py",
+        APP / "data/world_atlas_3min.bin",
+        APP / "data/world_atlas_3min.json",
+        APP / "data/WORLD_ATLAS_NOTICE.md",
     ]
     missing = [str(path.relative_to(ROOT)) for path in paths if not path.exists()]
     if missing:
@@ -124,11 +131,67 @@ def validate_dashboard() -> None:
         fail(f"dashboard references unpublished entities: {', '.join(missing)}")
 
 
+def validate_bundled_atlas() -> None:
+    atlas = APP / "data/world_atlas_3min.bin"
+    metadata_path = APP / "data/world_atlas_3min.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    size = atlas.stat().st_size
+    if not 20_000_000 < size < 60_000_000:
+        fail(f"bundled atlas size is outside the expected compact range: {size}")
+    if metadata.get("bytes") != size:
+        fail("bundled atlas metadata size does not match the file")
+    if metadata.get("license") != "CC BY-NC 4.0":
+        fail("bundled atlas metadata licence is missing or incorrect")
+    if metadata.get("source_doi") != "10.5880/GFZ.1.4.2016.001":
+        fail("bundled atlas source DOI is missing or incorrect")
+    if metadata.get("source_reference_year") != 2015:
+        fail("bundled atlas source reference year is missing or incorrect")
+    cell_arcmin = float(metadata.get("cell_arcmin_nominal", 0))
+    if not 2.5 <= cell_arcmin <= 3.5:
+        fail("bundled atlas is not at the expected approximately 3-arcminute resolution")
+
+    digest = hashlib.sha256()
+    with atlas.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    if digest.hexdigest() != metadata.get("sha256"):
+        fail("bundled atlas SHA-256 does not match metadata")
+
+    with atlas.open("rb") as handle:
+        header = handle.read(64)
+    if len(header) != 64 or header[:8] != b"AOATLS1\0":
+        fail("bundled atlas header magic is invalid")
+    _, width, height, west, north, cell_lon, cell_lat, scale, floor = struct.unpack(
+        "<8sIIdddddd", header
+    )
+    if width != metadata.get("width") or height != metadata.get("height"):
+        fail("bundled atlas binary dimensions do not match metadata")
+    if size != 64 + width * height * 2:
+        fail("bundled atlas binary length does not match its dimensions")
+    if not (-181 < west < -179 and 84 < north < 86):
+        fail("bundled atlas geographic origin is unexpected")
+    if not (0.04 < cell_lon < 0.06 and 0.04 < cell_lat < 0.06):
+        fail("bundled atlas cell size is unexpected")
+    if scale <= 0 or floor <= 0:
+        fail("bundled atlas encoding parameters are invalid")
+
+    docker = (APP / "Dockerfile").read_text(encoding="utf-8")
+    if "COPY data/world_atlas_3min.bin /usr/share/astronomy-observer/world_atlas_3min.bin" not in docker:
+        fail("Dockerfile does not install the bundled atlas")
+    light_pollution_source = (APP / "src/light_pollution.rs").read_text(encoding="utf-8")
+    if "BUNDLED_ATLAS_PATH" not in light_pollution_source or "binary_lookup" not in light_pollution_source:
+        fail("runtime does not contain the bundled atlas lookup")
+    scoring_source = (APP / "src/scoring.rs").read_text(encoding="utf-8")
+    if "sky.sqm_mag_arcsec2" not in scoring_source or "(dark, 0.18)" not in scoring_source:
+        fail("headline score is not visibly connected to location sky brightness")
+
+
 def validate_docs() -> None:
     markdown_files = list(ROOT.glob("*.md")) + list((ROOT / "docs").glob("*.md")) + [
         APP / "README.md",
         APP / "DOCS.md",
         APP / "CHANGELOG.md",
+        APP / "data/WORLD_ATLAS_NOTICE.md",
     ]
     prohibited = [
         re.compile(r"\bChatGPT\b", re.I),
@@ -181,6 +244,9 @@ def validate_licensing_and_pins() -> None:
     for pin in pins:
         if pin not in third_party:
             fail(f"third-party source pin {pin} missing from THIRD_PARTY_LICENSES.md")
+    for atlas_marker in ["10.5880/GFZ.1.4.2016.001", "CC BY-NC 4.0", "world_atlas_3min.bin"]:
+        if atlas_marker not in third_party:
+            fail(f"bundled World Atlas attribution is incomplete: {atlas_marker}")
 
 
 def validate_web_and_security() -> None:
@@ -215,7 +281,7 @@ def validate_web_and_security() -> None:
     all_text = "\n".join(
         path.read_text(encoding="utf-8", errors="ignore")
         for path in ROOT.rglob("*")
-        if path.is_file() and path.suffix not in {".png", ".jpg", ".jpeg"}
+        if path.is_file() and path.suffix not in {".png", ".jpg", ".jpeg", ".bin"}
     )
     secret_patterns = [
         re.compile(r"sk-(?:proj-)?[A-Za-z0-9_-]{16,}"),
@@ -232,6 +298,7 @@ def main() -> int:
         required_paths,
         validate_manifest,
         validate_dashboard,
+        validate_bundled_atlas,
         validate_docs,
         validate_licensing_and_pins,
         validate_web_and_security,

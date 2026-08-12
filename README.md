@@ -27,8 +27,9 @@ The runtime is a small Rust service with a C astronomy helper. It is designed fo
 - NOAA OVATION aurora probability.
 - Simple lowest-useful-altitude horizon setup, with an optional advanced directional mask.
 - Telescope and binocular aperture filtering.
-- Fixed SQM, Home Assistant SQM sensor, or an optional imported light-pollution grid.
-- Nearby darker-point search when a local light-pollution grid is available.
+- Automatic location-based light-pollution estimate from the bundled World Atlas derivative.
+- Fixed SQM, Home Assistant SQM sensor and higher-resolution local CSV overrides for observers with better local data.
+- Nearby darker-area search from the built-in atlas without manual setup.
 - Home Assistant entities for dashboards and automations.
 - Built-in Ingress view and a dependency-free native dashboard preset.
 
@@ -40,7 +41,7 @@ In Home Assistant, add this repository to the app store:
 
 Install **Astronomy Observer** and start it. The default configuration uses Home Assistant's Home coordinates. After the first successful refresh, open Astronomy Observer and press **Setup** to choose a Home Assistant person and the lowest useful altitude for the observing site.
 
-No light-pollution CSV is required for normal operation. If no SQM value or atlas grid is configured, sky brightness remains unknown, darkness-sensitive scoring is conservative, and the confidence value reflects that missing input.
+No light-pollution file is required. Astronomy Observer looks up the selected location in its bundled approximately 3-arcminute World Atlas grid and uses the resulting sky-brightness estimate in the initial overall, deep-sky and imaging scores. A real SQM sensor, a fixed SQM value or a higher-resolution local grid can still override that estimate.
 
 The full setup and operating guide is in [`astronomy_observer/DOCS.md`](astronomy_observer/DOCS.md).
 
@@ -49,7 +50,7 @@ The full setup and operating guide is in [`astronomy_observer/DOCS.md`](astronom
 - [Installation, configuration and Home Assistant entities](astronomy_observer/DOCS.md)
 - [Scoring method](docs/SCORING.md)
 - [Data sources, caching and fallbacks](docs/DATA_SOURCES.md)
-- [Light-pollution and SQM setup](docs/LIGHT_POLLUTION.md)
+- [Light pollution and sky brightness](docs/LIGHT_POLLUTION.md)
 - [Privacy and location handling](docs/PRIVACY.md)
 - [Architecture and resource budget](docs/ARCHITECTURE.md)
 - [Local Ingress endpoints](docs/API.md)
@@ -63,8 +64,8 @@ Project code is licensed under the **PolyForm Noncommercial License 1.0.0**. It 
 
 This is a source-available non-commercial licence, not an OSI open-source licence.
 
-Third-party code and data keep their own licences. See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+Third-party code and data keep their own licences. The bundled World Atlas derivative is separately covered by CC BY-NC 4.0. See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
 
 ## Release status
 
-`0.1.1` is still marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and sky brightness stays unknown when no SQM or local atlas data are available.
+`0.2.0` remains marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and the bundled light-pollution atlas is a 2015 planning baseline rather than a live sky-quality measurement.

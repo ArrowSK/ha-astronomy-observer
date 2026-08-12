@@ -8,7 +8,7 @@ Astronomy Observer answers three practical questions:
 2. When is the best two-hour window tonight?
 3. Which targets are most worthwhile during that window and the surrounding night?
 
-Astronomical positions and target geometry are calculated locally. Current weather and changing orbital or space-weather data are downloaded from public sources and cached. No account or API key is required.
+Astronomical positions, light-pollution lookup and target geometry are calculated locally. Current weather and changing orbital or space-weather data are downloaded from public sources and cached. No account or API key is required.
 
 ## First start
 
@@ -18,7 +18,7 @@ After the first successful refresh, open the Astronomy Observer panel and press 
 
 If a selected person temporarily has no usable latitude and longitude, the app falls back to Home rather than failing the entire refresh.
 
-The first refresh can take longer than later refreshes because the app may need to collect current weather, comet and satellite data.
+The first refresh can take longer than later refreshes because the app may need to collect current weather, comet and satellite data. The bundled light-pollution lookup is local and does not add a network request.
 
 ## Setup panel
 
@@ -55,11 +55,11 @@ The app interpolates between points and wraps through north.
 
 ### Light pollution
 
-Nothing is required on first installation.
+Nothing needs to be configured. Astronomy Observer includes a compact approximately 3-arcminute derivative of the Falchi World Atlas and looks up the selected observer location locally on every refresh.
 
-If no fixed SQM value, Home Assistant SQM sensor or Falchi atlas grid is configured, Astronomy Observer still works. Local sky brightness remains unknown, darkness-sensitive scoring is conservative, and confidence is reduced accordingly.
+The resulting moonless sky-brightness estimate feeds the darkness component immediately, so the headline, deep-sky and imaging scores already reflect the current location's light pollution.
 
-For a regular observing site, a measured fixed SQM value or a Home Assistant SQM sensor is the simplest option. The optional CSV is only needed when you want an atlas-based estimate or nearby darker-point search. See [Light-pollution setup](../docs/LIGHT_POLLUTION.md).
+Observers with better local data can still use a fixed SQM value, a Home Assistant SQM sensor or an optional higher-resolution local CSV. Those inputs take priority over the bundled atlas. See [Light pollution and sky brightness](../docs/LIGHT_POLLUTION.md).
 
 ## Full app configuration
 
@@ -80,7 +80,7 @@ The Home Assistant app configuration remains available for less frequently chang
 : How far ahead tonight's target search runs, 8–18 hours. Default: 14.
 
 `external_location_precision`
-: Decimal places used for coordinates sent to weather providers. Default: 3. Local astronomy keeps the unrounded Home Assistant coordinates. See [Privacy](../docs/PRIVACY.md).
+: Decimal places used for coordinates sent to weather providers. Default: 3. Local astronomy and light-pollution lookup keep the unrounded Home Assistant coordinates. See [Privacy](../docs/PRIVACY.md).
 
 ### Observing limits
 
@@ -109,8 +109,9 @@ The app uses this priority order:
 
 1. `sqm_override`, when greater than zero;
 2. `sqm_entity`, when it contains a valid numeric state;
-3. `light_pollution_file`, when a suitable local grid exists;
-4. unknown.
+3. `light_pollution_file`, when a suitable local CSV exists;
+4. the bundled location-based World Atlas estimate;
+5. unknown only when none of those sources can provide a usable value.
 
 `sqm_override`
 : Fixed moonless zenith sky brightness in mag/arcsec². Set to 0 to disable.
@@ -119,10 +120,12 @@ The app uses this priority order:
 : Optional Home Assistant `sensor.*` entity whose state is an SQM-style value in mag/arcsec².
 
 `light_pollution_file`
-: Optional file name inside the app configuration folder. Default: `light_pollution.csv`. The file does not need to exist unless you choose to use an atlas grid.
+: Optional file name inside the app configuration folder. Default: `light_pollution.csv`. The file does not need to exist. It is now an optional higher-resolution/local override rather than a requirement for atlas-based scoring.
 
 `nearby_dark_site_radius_km`
-: Straight-line radius used to search an imported grid for a materially darker point. Set to 0 to disable. This is a sky-quality search, not a route or access check.
+: Straight-line radius used to search for a materially darker atlas cell. Default: 75 km. The bundled atlas is used automatically unless a valid custom local grid has taken priority. Set to 0 to disable. This is a sky-quality search, not a route, access or safety check.
+
+The bundled atlas is a 2015 planning baseline, not a live SQM measurement. It adds about 42 MB to the installed image but is accessed directly from disk. A normal lookup reads one cell and a nearby search uses a small row buffer rather than loading the whole grid into memory.
 
 ### Changing targets and events
 
@@ -152,6 +155,8 @@ The headline score is 0–100, but it is not intended to be read alone. The app 
 - data confidence.
 
 The score is deterministic and its current formula is documented in [SCORING.md](../docs/SCORING.md). The weights are engineering choices for observing decisions rather than a published meteorological standard. This is why the component scores and raw inputs remain visible.
+
+The built-in World Atlas estimate enters through the darkness component. In the current formula, darkness contributes to the headline overall score and has greater influence on deep-sky work, while planetary observing is intentionally much less sensitive to city light pollution.
 
 The condition tiles in the Ingress page are clickable. Opening a tile explains what the quantity means and how it is used.
 
@@ -211,6 +216,8 @@ sensor.astronomy_observer_moon_altitude
 sensor.astronomy_observer_moon_interference
 sensor.astronomy_observer_sun_altitude
 ```
+
+`sensor.astronomy_observer_sky_brightness` reports the estimated SQM-style value. Its attributes include the source, artificial zenith luminance when atlas-based, and distance to the atlas cell centre. The source makes it clear whether the value came from a fixed override, a Home Assistant SQM sensor, a custom grid or the bundled World Atlas.
 
 Targets and events:
 
@@ -289,7 +296,7 @@ The log is intended to support local calibration over time. It does not automati
 
 ## Source failures
 
-The app does not invent missing observations. Weather has an independent provider fallback and a limited recent cache. Other changing sources have separate caches with age limits. The source-status entity and Ingress page show which source was used.
+The app does not invent missing observations. Weather has an independent provider fallback and a limited recent cache. Other changing sources have separate caches with age limits. The World Atlas lookup is bundled and local, so it does not depend on an external service at runtime. The source-status entity and Ingress page show which source was used.
 
 If weather cannot be obtained from either provider and there is no recent cache, the refresh fails and the previous successful Home Assistant states remain in place. Check the app log and `sensor.astronomy_observer_last_update` before relying on an old result.
 

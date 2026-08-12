@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 - 2026-08-12
+
+- Added a built-in approximately 3-arcminute global light-pollution grid derived from the Falchi World Atlas 2015 dataset.
+- Light pollution now follows the selected Home Assistant person or Home location automatically; no CSV is required for normal use.
+- The location-based sky-brightness estimate feeds the existing darkness component, so the headline, deep-sky and imaging scores reflect the observer's light pollution from the first calculation.
+- Kept fixed SQM values, Home Assistant SQM sensors and user-supplied local CSV grids as higher-priority overrides for observers with better local data.
+- Extended the nearby darker-area search to work with the bundled atlas without manual setup.
+- Added a compact binary atlas reader that reads only the required cell or nearby rows instead of loading the global grid into memory.
+- Added reproducible atlas-generation tooling, source metadata, checksum validation and third-party data attribution.
+
 ## 0.1.1 - 2026-08-12
 
 - Reworked the Top 10 selection so satellites and comets cannot crowd out normal observing targets.

@@ -28,16 +28,16 @@ configuration:
     description: Optional azimuth:altitude points for users whose horizon is blocked differently in different directions. Leave the default unchanged unless you need this advanced control.
   sqm_override:
     name: Fixed SQM value
-    description: Optional moonless zenith sky brightness in mag/arcsec². Set to 0 to use the configured SQM sensor or optional atlas grid.
+    description: Optional moonless zenith sky brightness in mag/arcsec². Set to 0 to use the configured SQM sensor, an optional local grid, or the built-in location estimate.
   sqm_entity:
     name: SQM sensor entity
     description: Optional Home Assistant sensor containing sky brightness in mag/arcsec². A fixed SQM value takes priority when both are configured.
   light_pollution_file:
-    name: Optional light-pollution grid file
-    description: Optional CSV containing latitude, longitude and artificial zenith radiance. Nothing needs to be entered here if you do not use a Falchi atlas grid.
+    name: Optional local light-pollution grid
+    description: Optional CSV containing latitude, longitude and artificial zenith radiance. Leave the default alone for normal use; the built-in World Atlas estimate works automatically from the selected location.
   nearby_dark_site_radius_km:
-    name: Dark-site search radius
-    description: Maximum straight-line radius used to find a darker point when an imported light-pollution grid is available. Set to 0 to disable.
+    name: Darker-area search radius
+    description: Maximum straight-line radius used to find a materially darker atlas cell around the observer. Set to 0 to disable the search.
   enable_satellites:
     name: Visible satellites
     description: Include selected visible satellite passes using current CelesTrak orbital elements. Unknown pass brightness is deliberately de-weighted.
@@ -49,4 +49,4 @@ configuration:
     description: Include potentially observable active comets from current Minor Planet Center orbital elements.
   external_location_precision:
     name: External coordinate precision
-    description: Decimal places used when coordinates are sent to weather services. Local astronomy calculations keep the full Home Assistant location.
+    description: Decimal places used when coordinates are sent to weather services. Local astronomy and light-pollution calculations keep the full Home Assistant location.

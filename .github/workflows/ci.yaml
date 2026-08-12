@@ -26,10 +26,13 @@ jobs:
         run: python3 tests/validate_repository.py
 
       - name: Check Python tools
-        run: python3 -m py_compile astronomy_observer/scripts/build_catalog.py tools/light_pollution_tile.py tests/validate_repository.py
+        run: python3 -m py_compile astronomy_observer/scripts/build_catalog.py astronomy_observer/scripts/build_global_atlas.py tools/light_pollution_tile.py tests/validate_repository.py
 
       - name: Validate catalogue builder conversions
         run: python3 astronomy_observer/scripts/build_catalog.py --self-test
+
+      - name: Validate bundled atlas builder
+        run: python3 astronomy_observer/scripts/build_global_atlas.py --self-test
 
       - name: Validate AppArmor profile syntax
         run: |
