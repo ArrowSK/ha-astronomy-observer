@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1 - 2026-08-12
+
+- Reworked **Conditions in the best window** into compact label/value lists instead of tiles.
+- Visually separated observing-quality scores from forecast measurements while preserving the existing scoring and raw data.
+- Made every condition row expandable directly below the row with a concise explanation of how the value is interpreted or used.
+- Added the Falchi/GFZ World Atlas reference and current light-pollution source details to the sky-brightness explanation.
+- Replaced the text Setup and Refresh controls with compact cogwheel and refresh icons.
+- Moved **Copy dashboard YAML** into Setup because it is normally only needed during dashboard creation.
+- Made a successful Setup save close the panel automatically while the recalculation continues.
+- Moved Observing Notes behind a toolbar icon and made observation history collapsible by default.
+- Added client-side history search plus metric-presence and time-range filters across the retained observation history.
+- Added green, amber and red source-status dots for current/local, cached/fallback/disabled and unavailable/failed sources.
+- Added static repository checks for the new condition-list, notes/history and source-status interface markers.
+
 ## 0.2.0 - 2026-08-12
 
 - Added a built-in approximately 3-arcminute global light-pollution grid derived from the Falchi World Atlas 2015 dataset.
