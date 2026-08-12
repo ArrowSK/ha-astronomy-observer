@@ -206,7 +206,22 @@ def validate_web_and_security() -> None:
     ]
     if any(path not in source for path in required_server_paths):
         fail("web server is missing required endpoints")
-    for marker in ["person-select", "minimum-altitude", "metric-detail", "outlook_details"]:
+    required_markers = [
+        "person-select",
+        "minimum-altitude",
+        "condition-groups",
+        "condition-item",
+        "notes-button",
+        "history-search",
+        "history-filter",
+        "history-period",
+        "status-dot",
+        "sourceStatusKind",
+        "outlook_details",
+        "Copy dashboard YAML",
+        "10.5880/GFZ.1.4.2016.001",
+    ]
+    for marker in required_markers:
         if marker not in web:
             fail(f"Ingress UI is missing expected interactive element: {marker}")
     if "172, 30, 32, 2" not in source:
