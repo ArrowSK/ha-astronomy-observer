@@ -75,8 +75,14 @@ jobs:
           curl --fail --silent --show-error --location \
             "https://raw.githubusercontent.com/cosinekitty/astronomy/${ASTRONOMY_ENGINE_COMMIT}/source/c/astronomy.h" \
             -o /tmp/astronomy-engine/astronomy.h
+          cc -O2 -Wall -Wextra \
+            -Wno-error=unused-parameter \
+            -Wno-error=missing-field-initializers \
+            -I/tmp/astronomy-engine \
+            -c /tmp/astronomy-engine/astronomy.c \
+            -o /tmp/astronomy.o
           cc -O2 -Wall -Wextra -Werror \
             -I/tmp/astronomy-engine \
-            astronomy_observer/scripts/astro_helper.c \
-            /tmp/astronomy-engine/astronomy.c \
-            -lm -o /tmp/astro-helper
+            -c astronomy_observer/scripts/astro_helper.c \
+            -o /tmp/astro-helper.o
+          cc /tmp/astro-helper.o /tmp/astronomy.o -lm -o /tmp/astro-helper
