@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.1 - 2026-08-12
+
+- Reworked the Top 10 selection so satellites and comets cannot crowd out normal observing targets.
+- Limited the final list to one satellite and one comet while allowing a broader mix of deep-sky objects, planets, meteor showers, the Moon, the Milky Way and aurora when relevant.
+- De-weighted satellite passes when brightness is not modelled, with stronger penalties for rocket bodies and debris and a smaller penalty for familiar high-interest spacecraft.
+- Excluded `A/`-designated asteroid-like objects from comet recommendations.
+- Added a Home Assistant person selector to the Ingress Setup panel and persisted the selection without requiring a restart.
+- Simplified horizon setup to a single lowest-useful-altitude choice for normal use while keeping the directional mask under an advanced section.
+- Clarified that the Falchi CSV is optional and that the app works without any light-pollution file.
+- Added a dedicated sky-brightness tile and plain-language light-pollution status in Setup.
+- Expanded the seven-night Ingress outlook with deep-sky, planetary, imaging, clear-sky, transparency, Moon-impact and confidence values.
+- Made the condition tiles interactive so each one explains what it represents and how it is used.
+- Kept the existing Home Assistant outlook attributes and dashboard entities compatible with the initial release.
+
 ## 0.1.0 - 2026-08-12
 
 - Initial public release.

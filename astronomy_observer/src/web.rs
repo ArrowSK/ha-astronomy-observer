@@ -1,3 +1,6 @@
+use crate::config::{AppConfig, UiSettings};
+use crate::coordinates::HorizonMask;
+use crate::ha::HaClient;
 use crate::models::Snapshot;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -11,7 +14,7 @@ use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 const INDEX: &str = include_str!("../web/index.html");
 const DASHBOARD: &str = include_str!("../dashboard/astronomy-dashboard.yaml");
-const MAX_OBSERVATION_BODY: usize = 16 * 1024;
+const MAX_REQUEST_BODY: usize = 16 * 1024;
 
 #[derive(Debug, Deserialize)]
 struct ObservationInput {
@@ -39,6 +42,14 @@ struct ObservationRecord {
     forecast_score: Option<f64>,
     forecast_transparency: Option<f64>,
     forecast_seeing_proxy: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SettingsInput {
+    #[serde(default)]
+    primary_person: String,
+    minimum_target_altitude: f64,
+    horizon_mask: String,
 }
 
 fn header(name: &str, value: &str) -> Header {
@@ -119,20 +130,34 @@ fn validate_observation(input: &ObservationInput) -> Result<(), &'static str> {
     Ok(())
 }
 
+fn validate_settings(input: &SettingsInput) -> Result<(), String> {
+    if !input.primary_person.trim().is_empty()
+        && !input.primary_person.trim().starts_with("person.")
+    {
+        return Err("Observer must be Home or a person.* entity".to_string());
+    }
+    if !(0.0..=60.0).contains(&input.minimum_target_altitude) {
+        return Err("Lowest useful altitude must be between 0° and 60°".to_string());
+    }
+    HorizonMask::parse(input.horizon_mask.trim())
+        .map(|_| ())
+        .map_err(|error| format!("Directional horizon mask is invalid: {error}"))
+}
+
 fn read_limited_body(request: &mut Request) -> Result<String, String> {
     if request
         .body_length()
-        .is_some_and(|length| length > MAX_OBSERVATION_BODY)
+        .is_some_and(|length| length > MAX_REQUEST_BODY)
     {
         return Err("request body too large".to_string());
     }
     let mut bytes = Vec::new();
     request
         .as_reader()
-        .take((MAX_OBSERVATION_BODY + 1) as u64)
+        .take((MAX_REQUEST_BODY + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|error| error.to_string())?;
-    if bytes.len() > MAX_OBSERVATION_BODY {
+    if bytes.len() > MAX_REQUEST_BODY {
         return Err("request body too large".to_string());
     }
     String::from_utf8(bytes).map_err(|_| "request body is not UTF-8".to_string())
@@ -140,6 +165,10 @@ fn read_limited_body(request: &mut Request) -> Result<String, String> {
 
 fn observation_path(data_dir: &Path) -> PathBuf {
     data_dir.join("observations.jsonl")
+}
+
+fn settings_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("ui_settings.json")
 }
 
 fn append_observation(path: &Path, record: &ObservationRecord) -> Result<(), String> {
@@ -223,7 +252,62 @@ fn handle_observation(
     }
 }
 
-pub fn serve(snapshot: Arc<RwLock<Option<Snapshot>>>, refresh_tx: Sender<()>, data_dir: PathBuf) {
+fn handle_settings(mut request: Request, data_dir: &Path, refresh_tx: &Sender<()>) {
+    let text = match read_limited_body(&mut request) {
+        Ok(text) => text,
+        Err(error) => {
+            let _ = request.respond(json_response(json!({"error": error}), 413));
+            return;
+        }
+    };
+    let input: SettingsInput = match serde_json::from_str(&text) {
+        Ok(input) => input,
+        Err(_) => {
+            let _ = request.respond(json_response(json!({"error": "invalid JSON"}), 400));
+            return;
+        }
+    };
+    if let Err(error) = validate_settings(&input) {
+        let _ = request.respond(json_response(json!({"error": error}), 400));
+        return;
+    }
+
+    let settings = UiSettings {
+        primary_person: Some(input.primary_person.trim().to_string()),
+        minimum_target_altitude: Some(input.minimum_target_altitude),
+        horizon_mask: Some(input.horizon_mask.trim().to_string()),
+    };
+    let body = match serde_json::to_string_pretty(&settings) {
+        Ok(body) => body,
+        Err(error) => {
+            let _ = request.respond(json_response(json!({"error": error.to_string()}), 500));
+            return;
+        }
+    };
+    let path = settings_path(data_dir);
+    let temporary = data_dir.join("ui_settings.json.tmp");
+    let result = fs::write(&temporary, body).and_then(|_| fs::rename(&temporary, &path));
+    match result {
+        Ok(()) => {
+            let _ = refresh_tx.send(());
+            let _ = request.respond(json_response(json!({"saved": true}), 200));
+        }
+        Err(error) => {
+            let _ = fs::remove_file(&temporary);
+            eprintln!("Could not save setup: {error}");
+            let _ = request.respond(json_response(json!({"error": "could not save setup"}), 500));
+        }
+    }
+}
+
+pub fn serve(
+    snapshot: Arc<RwLock<Option<Snapshot>>>,
+    refresh_tx: Sender<()>,
+    data_dir: PathBuf,
+    options_path: PathBuf,
+    config_dir: PathBuf,
+    ha: HaClient,
+) {
     std::thread::spawn(move || {
         let server = match Server::http("0.0.0.0:8099") {
             Ok(server) => server,
@@ -276,6 +360,34 @@ pub fn serve(snapshot: Arc<RwLock<Option<Snapshot>>>, refresh_tx: Sender<()>, da
                             .with_header(header("Content-Type", "text/yaml; charset=utf-8")),
                     ));
                 }
+                (Method::Get, "/api/people") => match ha.people() {
+                    Ok(people) => {
+                        let _ = request.respond(json_response(json!(people), 200));
+                    }
+                    Err(error) => {
+                        let _ = request.respond(json_response(json!({"error": error.to_string()}), 502));
+                    }
+                },
+                (Method::Get, "/api/settings") => {
+                    match AppConfig::load(&options_path, &data_dir, &config_dir) {
+                        Ok(config) => {
+                            let _ = request.respond(json_response(
+                                json!({
+                                    "primary_person": config.options.primary_person,
+                                    "minimum_target_altitude": config.options.minimum_target_altitude,
+                                    "horizon_mask": config.options.horizon_mask
+                                }),
+                                200,
+                            ));
+                        }
+                        Err(error) => {
+                            let _ = request.respond(json_response(json!({"error": error.to_string()}), 500));
+                        }
+                    }
+                }
+                (Method::Post, "/api/settings") => {
+                    handle_settings(request, &data_dir, &refresh_tx);
+                }
                 (Method::Get, "/api/observations") => {
                     let records = recent_observations(&observation_path(&data_dir), 50);
                     let _ = request.respond(json_response(json!(records), 200));
@@ -318,5 +430,15 @@ mod tests {
             notes: "clear and steady".to_string(),
         };
         assert!(validate_observation(&valid).is_ok());
+    }
+
+    #[test]
+    fn validates_simple_setup() {
+        let valid = SettingsInput {
+            primary_person: "person.alex".to_string(),
+            minimum_target_altitude: 20.0,
+            horizon_mask: "0:0,90:0,180:0,270:0".to_string(),
+        };
+        assert!(validate_settings(&valid).is_ok());
     }
 }

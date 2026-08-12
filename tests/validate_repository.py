@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import sys
-import tomllib
 from pathlib import Path
 
 import yaml
@@ -91,9 +90,12 @@ def validate_manifest() -> None:
     if set(schema) != set(translations):
         fail("config schema and English translation keys differ")
 
-    cargo = tomllib.loads((APP / "Cargo.toml").read_text(encoding="utf-8"))
-    if cargo["package"]["version"] != str(config["version"]):
-        fail("Cargo.toml and config.yaml versions differ")
+    version = str(config.get("version", ""))
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        fail("config.yaml version must be semantic major.minor.patch")
+    docker = (APP / "Dockerfile").read_text(encoding="utf-8")
+    if f"ARG BUILD_VERSION={version}" not in docker:
+        fail("Dockerfile default BUILD_VERSION must match config.yaml")
 
 
 def validate_dashboard() -> None:
@@ -105,12 +107,17 @@ def validate_dashboard() -> None:
 
     dashboard_entities = set(re.findall(r"entity:\s+([a-z_]+\.[a-z0-9_]+)", public))
     state_source = (APP / "src/state.rs").read_text(encoding="utf-8")
-    literal_published = set(re.findall(r'"((?:sensor|binary_sensor)\.astronomy_observer_[a-z0-9_]+)"', state_source))
+    literal_published = set(
+        re.findall(r'"((?:sensor|binary_sensor)\.astronomy_observer_[a-z0-9_]+)"', state_source)
+    )
     missing = []
     for entity in sorted(dashboard_entities):
         if entity in literal_published:
             continue
-        if re.fullmatch(r"sensor\.astronomy_observer_target_(?:[1-9]|10)", entity) and "sensor.astronomy_observer_target_{}" in state_source:
+        if (
+            re.fullmatch(r"sensor\.astronomy_observer_target_(?:[1-9]|10)", entity)
+            and "sensor.astronomy_observer_target_{}" in state_source
+        ):
             continue
         missing.append(entity)
     if missing:
@@ -166,7 +173,9 @@ def validate_licensing_and_pins() -> None:
 
     docker = (APP / "Dockerfile").read_text(encoding="utf-8")
     third_party = (ROOT / "THIRD_PARTY_LICENSES.md").read_text(encoding="utf-8")
-    pins = re.findall(r"ARG\s+(?:ASTRONOMY_ENGINE_COMMIT|OPENNGC_COMMIT)=([0-9a-f]{40})", docker)
+    pins = re.findall(
+        r"ARG\s+(?:ASTRONOMY_ENGINE_COMMIT|OPENNGC_COMMIT)=([0-9a-f]{40})", docker
+    )
     if len(pins) != 2:
         fail("expected two pinned third-party source commits in Dockerfile")
     for pin in pins:
@@ -177,17 +186,29 @@ def validate_licensing_and_pins() -> None:
 def validate_web_and_security() -> None:
     web = (APP / "web/index.html").read_text(encoding="utf-8")
     source = (APP / "src/web.rs").read_text(encoding="utf-8")
-    required_ui_calls = ["api/snapshot", "api/dashboard", "api/observations", "api/observation"]
+    required_ui_calls = [
+        "api/snapshot",
+        "api/dashboard",
+        "api/people",
+        "api/settings",
+        "api/observations",
+        "api/observation",
+    ]
     if any(call not in web for call in required_ui_calls):
         fail("Ingress UI is missing required API calls")
     required_server_paths = [
         '"/api/snapshot"',
         '"/api/dashboard"',
+        '"/api/people"',
+        '"/api/settings"',
         '"/api/observations"',
         '"/api/observation"',
     ]
     if any(path not in source for path in required_server_paths):
         fail("web server is missing required endpoints")
+    for marker in ["person-select", "minimum-altitude", "metric-detail", "outlook_details"]:
+        if marker not in web:
+            fail(f"Ingress UI is missing expected interactive element: {marker}")
     if "172, 30, 32, 2" not in source:
         fail("Ingress source-address restriction is missing")
 

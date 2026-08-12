@@ -1,6 +1,6 @@
 use crate::coordinates::HorizonMask;
 use crate::error::{err, AppResult};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -50,6 +50,16 @@ impl Default for Options {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiSettings {
+    #[serde(default)]
+    pub primary_person: Option<String>,
+    #[serde(default)]
+    pub minimum_target_altitude: Option<f64>,
+    #[serde(default)]
+    pub horizon_mask: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub options: Options,
@@ -60,11 +70,25 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn load(options_path: &Path, data_dir: &Path, config_dir: &Path) -> AppResult<Self> {
-        let options: Options = if options_path.exists() {
+        let mut options: Options = if options_path.exists() {
             serde_json::from_str(&fs::read_to_string(options_path)?)?
         } else {
             Options::default()
         };
+
+        let ui_path = data_dir.join("ui_settings.json");
+        if ui_path.exists() {
+            let settings: UiSettings = serde_json::from_str(&fs::read_to_string(&ui_path)?)?;
+            if let Some(person) = settings.primary_person {
+                options.primary_person = person;
+            }
+            if let Some(altitude) = settings.minimum_target_altitude {
+                options.minimum_target_altitude = altitude;
+            }
+            if let Some(mask) = settings.horizon_mask {
+                options.horizon_mask = mask;
+            }
+        }
 
         if !(10..=180).contains(&options.refresh_minutes) {
             return Err(err("refresh_minutes must be between 10 and 180"));
@@ -80,6 +104,11 @@ impl AppConfig {
         }
         if !(1.0..=100.0).contains(&options.good_observing_threshold) {
             return Err(err("good_observing_threshold must be between 1 and 100"));
+        }
+        if !options.primary_person.trim().is_empty()
+            && !options.primary_person.trim().starts_with("person.")
+        {
+            return Err(err("primary_person must be blank or a person.* entity"));
         }
         if options.sqm_override != 0.0 && !(15.0..=23.0).contains(&options.sqm_override) {
             return Err(err(

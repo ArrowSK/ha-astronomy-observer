@@ -29,12 +29,14 @@
     header { display: flex; gap: 18px; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
     h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: .01em; }
     h2 { font-size: 16px; margin: 0 0 12px; }
+    h3 { font-size: 14px; margin: 0 0 6px; }
     p { margin: 0; }
     .muted { color: var(--muted); }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    button, select, input { font: inherit; }
     button {
       appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
-      border-radius: 9px; padding: 8px 11px; cursor: pointer; font: inherit;
+      border-radius: 9px; padding: 8px 11px; cursor: pointer;
     }
     button:hover { border-color: #4d607f; }
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
@@ -43,44 +45,57 @@
     .conditions { grid-column: span 8; }
     .targets { grid-column: span 8; }
     .outlook { grid-column: span 4; }
-    .sources { grid-column: 1 / -1; }
-    .notes { grid-column: 1 / -1; }
+    .setup, .sources, .notes { grid-column: 1 / -1; }
     .score { font-size: 58px; line-height: 1; font-weight: 650; letter-spacing: -.04em; }
     .score small { font-size: 20px; color: var(--muted); font-weight: 500; }
     .grade { font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .09em; }
     .good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .metric { background: var(--panel2); border-radius: 9px; padding: 10px; min-height: 72px; }
+    .metric { background: var(--panel2); border: 1px solid transparent; border-radius: 9px; padding: 10px; min-height: 72px; cursor: pointer; }
+    .metric:hover, .metric:focus { border-color: #4d607f; outline: none; }
+    .metric.active { border-color: var(--accent); }
     .metric .v { font-size: 21px; font-variant-numeric: tabular-nums; }
     .metric .k { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .metric-detail { margin-top: 10px; border: 1px solid var(--line); border-radius: 9px; background: #0f1624; padding: 10px 12px; }
     .target { display: grid; grid-template-columns: 30px minmax(0, 1fr) 58px; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
     .target:first-of-type { border-top: 0; padding-top: 0; }
     .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
     .target-name { font-weight: 620; }
     .target-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
     .target-score { text-align: right; font-size: 19px; font-variant-numeric: tabular-nums; }
-    .night { display: grid; grid-template-columns: 1fr 48px; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); }
-    .night:first-of-type { border-top: 0; }
-    .night-score { text-align: right; font-variant-numeric: tabular-nums; }
+    .night { padding: 10px 0; border-top: 1px solid var(--line); }
+    .night:first-of-type { border-top: 0; padding-top: 0; }
+    .night-head { display: grid; grid-template-columns: 1fr 48px; gap: 8px; }
+    .night-score { text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .night-metrics { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+    .night-chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
     .source-row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 6px 0; }
     .source-row span:first-child { color: var(--muted); }
     .status { margin: 32px auto; max-width: 520px; text-align: center; color: var(--muted); }
-    .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; margin-right: 6px; color: var(--muted); font-size: 12px; }
+    .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 4px; color: var(--muted); font-size: 12px; }
     .foot { margin-top: 14px; color: var(--muted); font-size: 12px; }
     .note-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .note-form label { color: var(--muted); font-size: 12px; }
-    .note-form input, .note-form textarea { width: 100%; margin-top: 4px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 8px; padding: 8px; font: inherit; }
+    .note-form label, .setup-grid label { color: var(--muted); font-size: 12px; }
+    .note-form input, .note-form textarea, .setup-grid input, .setup-grid select {
+      width: 100%; margin-top: 4px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 8px; padding: 8px;
+    }
     .note-form .wide { grid-column: 1 / -1; }
     .note-form textarea { min-height: 72px; resize: vertical; }
     .note-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
     .saved-note { padding: 9px 0; border-top: 1px solid var(--line); }
     .saved-note:first-child { border-top: 0; }
+    .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .setup-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel2); }
+    .setup-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+    details { margin-top: 10px; }
+    summary { cursor: pointer; color: var(--muted); }
+    code { color: var(--accent); }
     @media (max-width: 760px) {
       header { display: block; }
       .toolbar { justify-content: flex-start; margin-top: 12px; }
       .hero, .conditions, .targets, .outlook { grid-column: 1 / -1; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .note-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .note-form, .setup-grid { grid-template-columns: 1fr; }
       .source-row { grid-template-columns: 1fr; gap: 0; }
     }
   </style>
@@ -93,10 +108,55 @@
       <p class="muted" id="where">Waiting for the first calculation…</p>
     </div>
     <div class="toolbar">
+      <button id="setup-button">Setup</button>
       <button id="refresh">Refresh now</button>
       <button id="dashboard">Copy dashboard YAML</button>
     </div>
   </header>
+
+  <section id="setup-card" class="card setup" hidden style="margin-bottom:12px">
+    <h2>Observer setup</h2>
+    <div class="setup-grid">
+      <div class="setup-box">
+        <h3>Location</h3>
+        <label>Observe for
+          <select id="person-select"><option value="">Home</option></select>
+        </label>
+        <p class="foot">People come directly from Home Assistant. If a selected person has no current coordinates, Home is used as the fallback.</p>
+      </div>
+      <div class="setup-box">
+        <h3>Horizon</h3>
+        <label>Lowest useful altitude
+          <select id="minimum-altitude">
+            <option value="10">10° — very open site</option>
+            <option value="15">15° — open site</option>
+            <option value="20">20° — general default</option>
+            <option value="25">25° — some obstructions</option>
+            <option value="30">30° — built-up / restricted view</option>
+            <option value="35">35° — strongly restricted view</option>
+          </select>
+        </label>
+        <p class="foot">For most users this is all that is needed. Targets below this altitude are ignored.</p>
+        <details>
+          <summary>Advanced directional horizon</summary>
+          <label>Azimuth:altitude points
+            <input id="horizon-mask" spellcheck="false" value="0:0,90:0,180:0,270:0">
+          </label>
+          <p class="foot">Only use this if different parts of your horizon are blocked by different amounts. Otherwise leave the flat default above.</p>
+        </details>
+      </div>
+      <div class="setup-box" style="grid-column:1/-1">
+        <h3>Light pollution</h3>
+        <div id="lp-status">Checking current sky-brightness source…</div>
+        <p class="foot"><strong>Nothing is required here.</strong> Astronomy Observer works without a CSV. If no SQM value or atlas grid is configured, light-pollution-sensitive scoring is deliberately conservative and confidence is lower.</p>
+        <details>
+          <summary>When should I use the CSV?</summary>
+          <p class="foot">Only when you want the Falchi atlas to supply local sky brightness and nearby darker-point searches. The optional CSV must contain <code>latitude,longitude,artificial_mcd_m2</code>. If you do not already have such a file, leave this alone. A fixed SQM value or a Home Assistant SQM sensor is simpler for a regular observing site.</p>
+        </details>
+      </div>
+    </div>
+    <div class="setup-actions"><button id="save-setup">Save and refresh</button><span class="muted" id="setup-status"></span></div>
+  </section>
 
   <div id="loading" class="status">The first calculation normally takes a little longer while current source data are collected.</div>
   <div id="content" class="grid" hidden>
@@ -115,6 +175,7 @@
     <section class="card conditions">
       <h2>Conditions in the best window</h2>
       <div class="metrics" id="metrics"></div>
+      <div id="metric-detail" class="metric-detail" hidden></div>
       <div class="foot" id="raw"></div>
     </section>
 
@@ -155,9 +216,44 @@ const n = (v, d = 0, suffix = '') => v === null || v === undefined ? '—' : `${
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const localTime = value => value ? new Date(value).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
 const grade = score => score >= 80 ? ['Excellent','good'] : score >= 70 ? ['Very good','good'] : score >= 55 ? ['Usable','warn'] : score >= 35 ? ['Poor','warn'] : ['Very poor','bad'];
+let setupLoaded = false;
 
-function metric(label, value) {
-  return `<div class="metric"><div class="v">${esc(value)}</div><div class="k">${esc(label)}</div></div>`;
+const metricHelp = {
+  deep: ['Deep sky', 'Combines cloud, transparency, darkness, Moon interference, wind and local sky brightness. It is the most relevant condition score for galaxies, nebulae and faint clusters.'],
+  planetary: ['Planetary', 'Weights clear sky and the seeing estimate more heavily. Transparency and darkness matter less for bright planets than for faint deep-sky targets.'],
+  imaging: ['Imaging', 'Balances cloud, transparency, estimated seeing, darkness and wind. It is a planning score rather than a mount or equipment safety limit.'],
+  clear: ['Clear-sky factor', 'A nonlinear optical-sky factor derived from total cloud plus low and high cloud layers. High cirrus is penalised even when a normal weather forecast may still look fairly clear.'],
+  transparency: ['Transparency', 'Estimated atmospheric clarity using visibility, aerosol optical depth, humidity, fine particles and dew conditions when available.'],
+  seeing: ['Seeing estimate', 'A relative estimate based mainly on upper-atmosphere and surface wind. It is not a measured arcsecond seeing value.'],
+  darkness: ['Darkness', 'Combines solar twilight with local sky-brightness information when available. A missing light-pollution input lowers confidence rather than inventing a local value.'],
+  moon: ['Moon interference', 'How strongly the Moon is expected to brighten the sky in the best observing window. Target-specific Moon separation is handled again when individual objects are ranked.'],
+  cloud: ['Cloud cover', 'Forecast total cloud cover at the representative time of the best window. Low, middle and high cloud layers are shown below the tiles.'],
+  visibility: ['Visibility', 'Forecast horizontal visibility. It is useful as one proxy for haze and poor transparency, but it is not an astronomical extinction measurement.'],
+  aod: ['Aerosol optical depth', 'Forecast aerosol optical depth near 550 nm. Lower values generally mean less aerosol haze and better transparency.'],
+  dew: ['Dew margin', 'Air temperature minus dew point. A small margin means condensation is more likely on optics and equipment.'],
+  sky: ['Sky brightness', 'Uses a fixed SQM value, a Home Assistant SQM sensor or an optional Falchi atlas grid. If none is configured, the value stays unknown and the score is conservative.']
+};
+
+function metric(label, value, key) {
+  return `<div class="metric" role="button" tabindex="0" data-detail="${esc(key)}"><div class="v">${esc(value)}</div><div class="k">${esc(label)}</div></div>`;
+}
+
+function bindMetricDetails() {
+  const detail = $('metric-detail');
+  const show = tile => {
+    document.querySelectorAll('.metric').forEach(item => item.classList.remove('active'));
+    tile.classList.add('active');
+    const entry = metricHelp[tile.dataset.detail];
+    if (!entry) return;
+    detail.innerHTML = `<strong>${esc(entry[0])}</strong><div class="muted" style="margin-top:3px">${esc(entry[1])}</div>`;
+    detail.hidden = false;
+  };
+  document.querySelectorAll('.metric').forEach(tile => {
+    tile.addEventListener('click', () => show(tile));
+    tile.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(tile); }
+    });
+  });
 }
 
 function render(snapshot) {
@@ -174,20 +270,24 @@ function render(snapshot) {
 
   const c = snapshot.conditions;
   const w = snapshot.best_window_context || {};
+  const skyValue = snapshot.sky_brightness.sqm_mag_arcsec2 == null ? 'Not configured' : `${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)} SQM`;
   $('metrics').innerHTML = [
-    metric('Deep sky', n(c.deep_sky, 0, '/100')),
-    metric('Planetary', n(c.planetary, 0, '/100')),
-    metric('Imaging', n(c.imaging, 0, '/100')),
-    metric('Clear-sky factor', n(c.cloud, 0, '/100')),
-    metric('Transparency', n(c.transparency, 0, '/100')),
-    metric('Seeing estimate', n(c.seeing_estimate, 0, '/100')),
-    metric('Darkness', n(c.darkness, 0, '/100')),
-    metric('Moon interference', n(c.moon_interference, 0, '/100')),
-    metric('Cloud cover', n(w.cloud_total_pct, 0, '%')),
-    metric('Visibility', n(w.visibility_km, 1, ' km')),
-    metric('AOD 550 nm', n(w.aerosol_optical_depth, 3)),
-    metric('Dew margin', n(c.dew_margin_c, 1, ' °C')),
+    metric('Deep sky', n(c.deep_sky, 0, '/100'), 'deep'),
+    metric('Planetary', n(c.planetary, 0, '/100'), 'planetary'),
+    metric('Imaging', n(c.imaging, 0, '/100'), 'imaging'),
+    metric('Clear-sky factor', n(c.cloud, 0, '/100'), 'clear'),
+    metric('Transparency', n(c.transparency, 0, '/100'), 'transparency'),
+    metric('Seeing estimate', n(c.seeing_estimate, 0, '/100'), 'seeing'),
+    metric('Darkness', n(c.darkness, 0, '/100'), 'darkness'),
+    metric('Moon interference', n(c.moon_interference, 0, '/100'), 'moon'),
+    metric('Cloud cover', n(w.cloud_total_pct, 0, '%'), 'cloud'),
+    metric('Visibility', n(w.visibility_km, 1, ' km'), 'visibility'),
+    metric('AOD 550 nm', n(w.aerosol_optical_depth, 3), 'aod'),
+    metric('Dew margin', n(c.dew_margin_c, 1, ' °C'), 'dew'),
+    metric('Sky brightness', skyValue, 'sky'),
   ].join('');
+  bindMetricDetails();
+
   $('raw').innerHTML = [
     `<span class="pill">Low cloud ${n(w.cloud_low_pct,0,'%')}</span>`,
     `<span class="pill">Mid cloud ${n(w.cloud_mid_pct,0,'%')}</span>`,
@@ -195,7 +295,6 @@ function render(snapshot) {
     `<span class="pill">Wind ${n(w.wind_speed_kmh,1,' km/h')}</span>`,
     `<span class="pill">200 hPa wind ${n(w.wind_200hpa_kmh,0,' km/h')}</span>`,
     `<span class="pill">Moon ${n(w.moon_illumination_pct,0,'%')}</span>`,
-    `<span class="pill">SQM ${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)}</span>`,
   ].join('');
 
   $('target-list').innerHTML = snapshot.recommendations.length ? snapshot.recommendations.map((r, i) => `
@@ -207,18 +306,68 @@ function render(snapshot) {
         <div class="target-meta">${esc(r.note)}${r.moon_separation_deg == null ? '' : ` · Moon ${n(r.moon_separation_deg,0,'°')} away`}</div>
       </div>
       <div class="target-score">${Math.round(r.score)}</div>
-    </div>`).join('') : '<div class="muted">No suitable targets found in the configured window.</div>';
+    </div>`).join('') : '<div class="muted">No worthwhile targets cleared the current observing limits.</div>';
 
-  $('night-list').innerHTML = snapshot.outlook.length ? snapshot.outlook.map(r => `
-    <div class="night"><div><strong>${esc(r.date)}</strong><div class="muted">best ${localTime(r.best_time)}</div></div><div class="night-score">${Math.round(r.score)}</div></div>`).join('') : '<div class="muted">No night outlook is available.</div>';
+  const detailedNights = Array.isArray(snapshot.outlook_details) ? snapshot.outlook_details : [];
+  if (detailedNights.length) {
+    $('night-list').innerHTML = detailedNights.map(r => `
+      <div class="night">
+        <div class="night-head"><div><strong>${esc(r.date)}</strong><div class="muted">best around ${localTime(r.best_time)}</div></div><div class="night-score">${Math.round(r.score)}</div></div>
+        <div class="night-metrics">
+          <span class="night-chip">Deep ${Math.round(r.deep_sky)}</span>
+          <span class="night-chip">Planets ${Math.round(r.planetary)}</span>
+          <span class="night-chip">Imaging ${Math.round(r.imaging)}</span>
+          <span class="night-chip">Clear ${Math.round(r.clear_sky)}</span>
+          <span class="night-chip">Trans ${Math.round(r.transparency)}</span>
+          <span class="night-chip">Moon impact ${Math.round(r.moon_interference)}</span>
+          <span class="night-chip">Conf ${Math.round(r.confidence)}</span>
+        </div>
+      </div>`).join('');
+  } else if (snapshot.outlook?.length) {
+    $('night-list').innerHTML = snapshot.outlook.map(r => `<div class="night"><div class="night-head"><div><strong>${esc(r.date)}</strong><div class="muted">best around ${localTime(r.best_time)}</div></div><div class="night-score">${Math.round(r.score)}</div></div></div>`).join('');
+  } else {
+    $('night-list').innerHTML = '<div class="muted">No night outlook is available.</div>';
+  }
 
   const sources = snapshot.source_status || {};
   $('source-list').innerHTML = Object.keys(sources).sort().map(key => `<div class="source-row"><span>${esc(key.replaceAll('_',' '))}</span><span>${esc(sources[key])}</span></div>`).join('');
+
+  if (snapshot.sky_brightness.sqm_mag_arcsec2 == null) {
+    $('lp-status').innerHTML = '<span class="warn">No local sky-brightness input is configured.</span> This is optional.';
+  } else {
+    $('lp-status').innerHTML = `Using <strong>${esc(snapshot.sky_brightness.source)}</strong> · ${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)} mag/arcsec²`;
+  }
 }
 
 function optionalNumber(id) {
   const value = $(id).value.trim();
   return value === '' ? null : Number(value);
+}
+
+async function loadSetup() {
+  $('setup-status').textContent = 'Loading…';
+  try {
+    const [peopleResponse, settingsResponse] = await Promise.all([
+      fetch('api/people', {cache:'no-store'}),
+      fetch('api/settings', {cache:'no-store'})
+    ]);
+    if (!peopleResponse.ok) throw new Error(`People: HTTP ${peopleResponse.status}`);
+    if (!settingsResponse.ok) throw new Error(`Settings: HTTP ${settingsResponse.status}`);
+    const people = await peopleResponse.json();
+    const settings = await settingsResponse.json();
+    $('person-select').innerHTML = '<option value="">Home</option>' + people.map(person => `<option value="${esc(person.entity_id)}">${esc(person.name)}${person.has_location ? '' : ' · no current coordinates'}</option>`).join('');
+    $('person-select').value = settings.primary_person || '';
+    const altitude = String(Math.round(Number(settings.minimum_target_altitude ?? 20)));
+    if (![...$('minimum-altitude').options].some(option => option.value === altitude)) {
+      $('minimum-altitude').insertAdjacentHTML('beforeend', `<option value="${esc(altitude)}">${esc(altitude)}° — current value</option>`);
+    }
+    $('minimum-altitude').value = altitude;
+    $('horizon-mask').value = settings.horizon_mask || '0:0,90:0,180:0,270:0';
+    $('setup-status').textContent = '';
+    setupLoaded = true;
+  } catch (error) {
+    $('setup-status').textContent = `Unable to load setup: ${error.message}`;
+  }
 }
 
 async function loadObservations() {
@@ -250,6 +399,32 @@ async function load() {
     $('loading').textContent = `Unable to read the current result: ${error.message}`;
   }
 }
+
+$('setup-button').addEventListener('click', async () => {
+  $('setup-card').hidden = !$('setup-card').hidden;
+  if (!$('setup-card').hidden && !setupLoaded) await loadSetup();
+});
+
+$('save-setup').addEventListener('click', async () => {
+  const payload = {
+    primary_person: $('person-select').value,
+    minimum_target_altitude: Number($('minimum-altitude').value),
+    horizon_mask: $('horizon-mask').value.trim() || '0:0,90:0,180:0,270:0'
+  };
+  $('save-setup').disabled = true;
+  $('setup-status').textContent = 'Saving…';
+  try {
+    const response = await fetch('api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    $('setup-status').textContent = 'Saved. Recalculating…';
+    setTimeout(async () => { await load(); $('setup-status').textContent = 'Saved'; }, 2200);
+  } catch (error) {
+    $('setup-status').textContent = error.message;
+  } finally {
+    $('save-setup').disabled = false;
+  }
+});
 
 $('refresh').addEventListener('click', async () => {
   $('refresh').disabled = true;

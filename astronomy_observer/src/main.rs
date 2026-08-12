@@ -58,41 +58,56 @@ fn run() -> AppResult<()> {
     let config_dir = arg_value(&args, "--config-dir", "/config");
     std::fs::create_dir_all(&data_dir)?;
 
-    let cfg = AppConfig::load(&options, &data_dir, &config_dir)?;
+    AppConfig::load(&options, &data_dir, &config_dir)?;
     let ha = HaClient::new()?;
     let shared: Arc<RwLock<Option<Snapshot>>> = Arc::new(RwLock::new(None));
     let (refresh_tx, refresh_rx) = mpsc::channel();
-    web::serve(shared.clone(), refresh_tx, data_dir.clone());
+    web::serve(
+        shared.clone(),
+        refresh_tx,
+        data_dir.clone(),
+        options.clone(),
+        config_dir.clone(),
+        ha.clone(),
+    );
 
     let terminate = Arc::new(AtomicBool::new(false));
     flag::register(SIGTERM, terminate.clone())?;
     flag::register(SIGINT, terminate.clone())?;
 
-    let interval = Duration::from_secs(cfg.options.refresh_minutes * 60);
     let mut next = Instant::now();
 
     while !terminate.load(Ordering::Relaxed) {
         if Instant::now() >= next {
-            match engine::refresh(&cfg, &ha) {
-                Ok(snapshot) => {
-                    println!(
-                        "refresh complete: score {:.0}, {} recommendations, weather {}",
-                        snapshot.conditions.overall,
-                        snapshot.recommendations.len(),
-                        snapshot.weather_source
-                    );
-                    if let Err(error) =
-                        state::publish(&ha, &snapshot, cfg.options.good_observing_threshold)
-                    {
-                        eprintln!("Home Assistant state publish error: {error}");
+            match AppConfig::load(&options, &data_dir, &config_dir) {
+                Ok(cfg) => {
+                    let interval = Duration::from_secs(cfg.options.refresh_minutes * 60);
+                    match engine::refresh(&cfg, &ha) {
+                        Ok(snapshot) => {
+                            println!(
+                                "refresh complete: score {:.0}, {} recommendations, weather {}",
+                                snapshot.conditions.overall,
+                                snapshot.recommendations.len(),
+                                snapshot.weather_source
+                            );
+                            if let Err(error) =
+                                state::publish(&ha, &snapshot, cfg.options.good_observing_threshold)
+                            {
+                                eprintln!("Home Assistant state publish error: {error}");
+                            }
+                            if let Ok(mut guard) = shared.write() {
+                                *guard = Some(snapshot);
+                            }
+                        }
+                        Err(error) => eprintln!("refresh failed: {error}"),
                     }
-                    if let Ok(mut guard) = shared.write() {
-                        *guard = Some(snapshot);
-                    }
+                    next = Instant::now() + interval;
                 }
-                Err(error) => eprintln!("refresh failed: {error}"),
+                Err(error) => {
+                    eprintln!("configuration reload failed: {error}");
+                    next = Instant::now() + Duration::from_secs(60);
+                }
             }
-            next = Instant::now() + interval;
         }
 
         let wait = next

@@ -1,12 +1,16 @@
 use crate::config::AppConfig;
 use crate::error::{err, AppResult};
 use crate::ha::HaClient;
-use crate::models::{AstronomySample, HourlyWeather, Recommendation, Snapshot, WindowContext};
+use crate::models::{
+    AstronomySample, ConditionScore, HourlyWeather, NightOutlookDetail, Recommendation, Snapshot,
+    WindowContext,
+};
 use crate::{
     astro, aurora, comets, light_pollution, meteors, satellites, scoring, targets, weather,
 };
-use chrono::{DateTime, Duration, TimeZone, Utc};
-use std::collections::HashMap;
+use chrono::{DateTime, Duration, TimeZone, Timelike, Utc};
+use chrono_tz::Tz;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
 fn timeline(now: DateTime<Utc>, days: usize) -> Vec<DateTime<Utc>> {
@@ -100,6 +104,152 @@ fn window_context(
     }
 }
 
+fn night_outlook_details(
+    scores: &[(DateTime<Utc>, ConditionScore)],
+    samples: &[AstronomySample],
+    timezone: &str,
+    days: usize,
+) -> Vec<NightOutlookDetail> {
+    let tz: Tz = timezone.parse().unwrap_or(chrono_tz::UTC);
+    let mut grouped: BTreeMap<String, Vec<(DateTime<Utc>, ConditionScore)>> = BTreeMap::new();
+    for (time, score) in scores {
+        let sun_altitude = astro::sample_nearest(samples, *time)
+            .and_then(|sample| sample.bodies.get("Sun"))
+            .map(|sun| sun.altitude_deg)
+            .unwrap_or(90.0);
+        if sun_altitude > -12.0 {
+            continue;
+        }
+        let local = time.with_timezone(&tz);
+        let date = if local.hour() < 12 {
+            local.date_naive() - Duration::days(1)
+        } else {
+            local.date_naive()
+        };
+        grouped
+            .entry(date.to_string())
+            .or_default()
+            .push((*time, score.clone()));
+    }
+
+    grouped
+        .into_iter()
+        .take(days)
+        .filter_map(|(date, values)| {
+            values
+                .into_iter()
+                .max_by(|a, b| a.1.overall.partial_cmp(&b.1.overall).unwrap())
+                .map(|(best_time, score)| NightOutlookDetail {
+                    date,
+                    score: score.overall,
+                    best_time,
+                    deep_sky: score.deep_sky,
+                    planetary: score.planetary,
+                    imaging: score.imaging,
+                    clear_sky: score.cloud,
+                    transparency: score.transparency,
+                    seeing_estimate: score.seeing_estimate,
+                    darkness: score.darkness,
+                    moon_interference: score.moon_interference,
+                    confidence: score.confidence,
+                })
+        })
+        .collect()
+}
+
+fn adjust_candidate(mut recommendation: Recommendation) -> Option<Recommendation> {
+    let category = recommendation.category.as_str();
+    let upper_name = recommendation.name.to_ascii_uppercase();
+
+    if category == "comet" && upper_name.trim_start().starts_with("A/") {
+        return None;
+    }
+
+    match category {
+        "satellite" => {
+            let (factor, ceiling, equipment) = if upper_name.contains("ISS") {
+                (0.95, 92.0, "naked eye".to_string())
+            } else if upper_name.contains("TIANGONG") || upper_name.contains("CSS") {
+                (0.90, 90.0, "naked eye".to_string())
+            } else if upper_name.contains("HST") || upper_name.contains("HUBBLE") {
+                (0.82, 84.0, "naked eye or binoculars".to_string())
+            } else if upper_name.contains("TERRA")
+                || upper_name.contains("AQUA")
+                || upper_name.contains("LANDSAT")
+                || upper_name.contains("NOAA")
+            {
+                (0.65, 72.0, "binoculars; naked-eye brightness uncertain".to_string())
+            } else if upper_name.contains("R/B") || upper_name.contains("DEB") {
+                (0.42, 58.0, "binoculars; brightness can vary strongly".to_string())
+            } else {
+                (0.55, 65.0, "binoculars; brightness not modelled".to_string())
+            };
+            recommendation.score = (recommendation.score * factor).min(ceiling);
+            recommendation.equipment = equipment;
+            recommendation.note.push_str(
+                "; brightness is not predicted, so the pass is deliberately de-weighted",
+            );
+        }
+        "comet" => {
+            let factor = match recommendation.magnitude {
+                Some(magnitude) if magnitude <= 7.5 => 1.05,
+                Some(magnitude) if magnitude <= 10.0 => 0.95,
+                Some(magnitude) if magnitude <= 12.5 => 0.82,
+                Some(_) => 0.70,
+                None => 0.75,
+            };
+            recommendation.score = (recommendation.score * factor).min(95.0);
+        }
+        "meteor shower" => {
+            recommendation.score = (recommendation.score * 1.05).min(100.0);
+        }
+        "aurora" => {
+            recommendation.score = (recommendation.score * 1.05).min(100.0);
+        }
+        _ => {}
+    }
+
+    Some(recommendation)
+}
+
+fn category_cap(category: &str) -> usize {
+    match category {
+        "deep sky" => 6,
+        "planet" => 3,
+        "Moon" => 1,
+        "comet" => 1,
+        "satellite" => 1,
+        "meteor shower" => 1,
+        "Milky Way" => 1,
+        "aurora" => 1,
+        _ => 2,
+    }
+}
+
+fn select_recommendations(candidates: Vec<Recommendation>, limit: usize) -> Vec<Recommendation> {
+    let mut candidates: Vec<Recommendation> = candidates
+        .into_iter()
+        .filter_map(adjust_candidate)
+        .filter(|recommendation| recommendation.score >= 20.0)
+        .collect();
+    candidates.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+    let mut selected = Vec::new();
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for recommendation in candidates {
+        if selected.len() >= limit {
+            break;
+        }
+        let count = counts.get(&recommendation.category).copied().unwrap_or(0);
+        if count >= category_cap(&recommendation.category) {
+            continue;
+        }
+        *counts.entry(recommendation.category.clone()).or_insert(0) += 1;
+        selected.push(recommendation);
+    }
+    selected
+}
+
 pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     let now = Utc::now();
     let location = ha.location(&cfg.options.primary_person)?;
@@ -144,6 +294,12 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
             }
         };
     let outlook = scoring::outlook(
+        &hourly,
+        &samples,
+        &location.timezone,
+        cfg.options.forecast_days,
+    );
+    let outlook_details = night_outlook_details(
         &hourly,
         &samples,
         &location.timezone,
@@ -221,7 +377,7 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     {
         candidates.push(recommendation);
     }
-    let recommendations = targets::select_diverse(candidates, 10);
+    let recommendations = select_recommendations(candidates, 10);
 
     let mut source_status = HashMap::new();
     source_status.insert("location".to_string(), location.source.clone());
@@ -252,7 +408,51 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
         weather_stale: weather_series.stale,
         recommendations,
         outlook,
+        outlook_details,
         aurora,
         source_status,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn recommendation(name: &str, category: &str, score: f64) -> Recommendation {
+        Recommendation {
+            name: name.to_string(),
+            category: category.to_string(),
+            score,
+            best_time: Utc::now(),
+            altitude_deg: 60.0,
+            azimuth_deg: 180.0,
+            magnitude: None,
+            moon_separation_deg: None,
+            equipment: "test".to_string(),
+            note: "test".to_string(),
+        }
+    }
+
+    #[test]
+    fn top_targets_do_not_fill_with_satellites() {
+        let mut candidates = vec![
+            recommendation("SL-14 R/B", "satellite", 99.0),
+            recommendation("SL-8 R/B", "satellite", 98.0),
+            recommendation("TERRA", "satellite", 97.0),
+            recommendation("Saturn", "planet", 78.0),
+            recommendation("M13", "deep sky", 74.0),
+            recommendation("M31", "deep sky", 72.0),
+        ];
+        candidates.push(recommendation("A/2025 S3", "comet", 80.0));
+        let selected = select_recommendations(candidates, 10);
+        assert_eq!(
+            selected
+                .iter()
+                .filter(|value| value.category == "satellite")
+                .count(),
+            1
+        );
+        assert!(!selected.iter().any(|value| value.name.starts_with("A/")));
+        assert!(selected.first().is_some_and(|value| value.name != "SL-14 R/B"));
+    }
 }

@@ -141,6 +141,22 @@ pub struct NightOutlook {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NightOutlookDetail {
+    pub date: String,
+    pub score: f64,
+    pub best_time: DateTime<Utc>,
+    pub deep_sky: f64,
+    pub planetary: f64,
+    pub imaging: f64,
+    pub clear_sky: f64,
+    pub transparency: f64,
+    pub seeing_estimate: f64,
+    pub darkness: f64,
+    pub moon_interference: f64,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuroraStatus {
     pub probability_pct: Option<f64>,
     pub forecast_time: Option<String>,
@@ -162,6 +178,7 @@ pub struct Snapshot {
     pub weather_stale: bool,
     pub recommendations: Vec<Recommendation>,
     pub outlook: Vec<NightOutlook>,
+    pub outlook_details: Vec<NightOutlookDetail>,
     pub aurora: AuroraStatus,
     pub source_status: HashMap<String, String>,
 }

@@ -8,28 +8,67 @@ Astronomy Observer answers three practical questions:
 2. When is the best two-hour window tonight?
 3. Which targets are most worthwhile during that window and the surrounding night?
 
-The app calculates the astronomy locally. Current weather and changing orbital/space-weather data are downloaded from public sources and cached. No account or API key is required.
+Astronomical positions and target geometry are calculated locally. Current weather and changing orbital or space-weather data are downloaded from public sources and cached. No account or API key is required.
 
 ## First start
 
 The default configuration works without a `person` entity. In that case the app uses the latitude, longitude, elevation and time zone configured for Home Assistant.
 
-For a moving observer, set:
+After the first successful refresh, open the Astronomy Observer panel and press **Setup**. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.
 
-```yaml
-primary_person: person.alex
+If a selected person temporarily has no usable latitude and longitude, the app falls back to Home rather than failing the entire refresh.
+
+The first refresh can take longer than later refreshes because the app may need to collect current weather, comet and satellite data.
+
+## Setup panel
+
+The Setup panel is intended for the settings most people need frequently.
+
+### Observer
+
+Choose **Home** or one of the Home Assistant people shown in the list. Saving the setting triggers a refresh immediately.
+
+The selection is stored in the app's persistent data folder and overrides the `primary_person` value from the app configuration until it is changed again from Setup.
+
+### Horizon
+
+For most users the only horizon setting needed is **Lowest useful altitude**.
+
+Typical choices are:
+
+- 10–15° for a very open observing site;
+- 20° as the general default;
+- 25° where low buildings or trees are common;
+- 30–35° for a strongly restricted urban or balcony view.
+
+Targets below this altitude are ignored.
+
+The **Advanced directional horizon** section is optional. It exists for observers whose horizon is blocked by different amounts in different directions. If that does not describe the site, leave it at the flat default.
+
+An advanced mask is a comma-separated set of `azimuth:altitude` points, for example:
+
+```text
+0:12,45:18,90:30,135:24,180:12,225:8,270:10,315:14
 ```
 
-The entity must have latitude and longitude attributes. If the selected person temporarily has no usable coordinates, the app falls back to Home Assistant's Home coordinates rather than failing the entire refresh.
+The app interpolates between points and wraps through north.
 
-The first refresh can take longer than later refreshes because the app may need to collect current weather, comet and satellite data. After the first successful refresh, the Ingress page becomes available and the Home Assistant entities are populated.
+### Light pollution
 
-## Configuration
+Nothing is required on first installation.
+
+If no fixed SQM value, Home Assistant SQM sensor or Falchi atlas grid is configured, Astronomy Observer still works. Local sky brightness remains unknown, darkness-sensitive scoring is conservative, and confidence is reduced accordingly.
+
+For a regular observing site, a measured fixed SQM value or a Home Assistant SQM sensor is the simplest option. The optional CSV is only needed when you want an atlas-based estimate or nearby darker-point search. See [Light-pollution setup](../docs/LIGHT_POLLUTION.md).
+
+## Full app configuration
+
+The Home Assistant app configuration remains available for less frequently changed settings.
 
 ### Location and refresh
 
 `primary_person`
-: Optional `person.*` entity to follow. Blank means Home coordinates.
+: Optional `person.*` entity. The Setup panel is the easier way to choose it. Blank means Home.
 
 `refresh_minutes`
 : Normal refresh interval, 10–180 minutes. Default: 30. Location is checked on every refresh.
@@ -46,20 +85,10 @@ The first refresh can take longer than later refreshes because the app may need 
 ### Observing limits
 
 `minimum_target_altitude`
-: Global minimum altitude in degrees. Default: 20°. The horizon mask can impose a higher limit at a given azimuth.
+: Lowest useful altitude in degrees. Default: 20°. The Setup panel exposes this as a simple list of common values.
 
 `horizon_mask`
-: A comma-separated list of `azimuth:minimum_altitude` points. The app interpolates between points and wraps through north. Example:
-
-```text
-0:12,45:18,90:30,135:24,180:12,225:8,270:10,315:14
-```
-
-Use this to exclude buildings, trees, hills or a poor low horizon. A flat unobstructed horizon is:
-
-```text
-0:0,90:0,180:0,270:0
-```
+: Optional directional obstruction mask. Most users should leave the default unchanged and use `minimum_target_altitude` instead.
 
 `good_observing_threshold`
 : Threshold for `binary_sensor.astronomy_observer_good_observing`. Default: 70.
@@ -72,7 +101,7 @@ Use this to exclude buildings, trees, hills or a poor low horizon. A flat unobst
 `binocular_aperture_mm`
 : Binocular objective diameter in millimetres. Set to 0 when binocular-only targets should not be considered.
 
-Aperture is currently used as a broad visibility gate. It is not a substitute for a full optical train model; focal length, field of view, filters and imaging scale are listed on the roadmap.
+Aperture is currently used as a broad visibility gate. It is not a substitute for a complete optical train model; focal length, field of view, filters and imaging scale remain future work.
 
 ### Sky brightness and light pollution
 
@@ -84,24 +113,24 @@ The app uses this priority order:
 4. unknown.
 
 `sqm_override`
-: Fixed moonless zenith sky brightness in mag/arcsec². Set to 0 to disable. This is useful for a regularly used observing site with a known representative value.
+: Fixed moonless zenith sky brightness in mag/arcsec². Set to 0 to disable.
 
 `sqm_entity`
-: Optional Home Assistant `sensor.*` entity whose state is an SQM-style value in mag/arcsec². This is the preferred option for a live local meter.
+: Optional Home Assistant `sensor.*` entity whose state is an SQM-style value in mag/arcsec².
 
 `light_pollution_file`
-: File name inside this app's configuration folder. Default: `light_pollution.csv`. See [Light-pollution setup](../docs/LIGHT_POLLUTION.md).
+: Optional file name inside the app configuration folder. Default: `light_pollution.csv`. The file does not need to exist unless you choose to use an atlas grid.
 
 `nearby_dark_site_radius_km`
-: Straight-line radius used to search the imported grid for a materially darker point. Set to 0 to disable. This is a sky-quality search, not a route or access check.
+: Straight-line radius used to search an imported grid for a materially darker point. Set to 0 to disable. This is a sky-quality search, not a route or access check.
 
 ### Changing targets and events
 
 `enable_satellites`
-: Searches current CelesTrak visual-group orbital elements for visible passes.
+: Searches current CelesTrak visual-group orbital elements for potentially visible passes.
 
 `enable_comets`
-: Searches current Minor Planet Center comet elements for potentially observable comets.
+: Searches current Minor Planet Center comet elements for potentially observable active comets.
 
 `enable_aurora`
 : Reads the current NOAA SWPC OVATION product and adds an aurora recommendation when the local probability is meaningful.
@@ -122,11 +151,31 @@ The headline score is 0–100, but it is not intended to be read alone. The app 
 - imaging score;
 - data confidence.
 
-The score is deterministic and its current formula is documented in [SCORING.md](../docs/SCORING.md). The weights are engineering choices for observing decisions, not a published meteorological standard. This is why the component scores and raw inputs remain visible.
+The score is deterministic and its current formula is documented in [SCORING.md](../docs/SCORING.md). The weights are engineering choices for observing decisions rather than a published meteorological standard. This is why the component scores and raw inputs remain visible.
+
+The condition tiles in the Ingress page are clickable. Opening a tile explains what the quantity means and how it is used.
+
+## Best-target ranking
+
+The target list is deliberately not a simple numerical sort across every possible object class.
+
+The app applies category limits so one class cannot fill the entire list. In particular, only one satellite and one comet can occupy the final Top 10. Deep-sky objects and planets may occupy several places because they are the normal observing programme for many advanced amateurs.
+
+Satellite pass brightness is not available from the CelesTrak orbital elements used by the app. For that reason ordinary satellites, rocket bodies and debris are deliberately de-weighted even when the geometry of the pass is excellent. Recognisable high-interest objects such as the ISS receive a higher interest weight, but still do not bypass the one-satellite limit.
+
+Minor Planet Center objects with an `A/` designation are excluded from the comet list because that designation is used for asteroid-like objects rather than an active comet observing recommendation.
+
+A list can contain fewer than ten objects if not enough candidates pass the configured observing limits. The app does not pad the list with weak extra satellites or other low-value entries merely to reach ten.
+
+## Seven-night outlook
+
+The Ingress page shows more than a single score for each night. It includes the best time and the corresponding deep-sky, planetary, imaging, clear-sky, transparency, Moon-impact and confidence values.
+
+The Home Assistant `sensor.astronomy_observer_next_good_night` entity keeps the compact outlook structure used by the initial release, so existing automations and dashboard templates remain compatible.
 
 ## Home Assistant entities
 
-The app publishes state entities through the authenticated Home Assistant Core API. They are created when the app successfully refreshes and are recreated after restart as needed.
+The app publishes state entities through the authenticated Home Assistant Core API. They are created after a successful refresh and recreated after restart as needed.
 
 Core status:
 
@@ -188,11 +237,11 @@ sensor.astronomy_observer_last_update
 
 Target sensors include score, category, best time, altitude, azimuth, magnitude when known, Moon separation when relevant, equipment suggestion and a short note as attributes.
 
-The app also fires an `astronomy_observer_updated` event after each successful publish. It contains the overall score, top target and generation time. This is useful for automations that should react only when a complete result has been published.
+The app also fires an `astronomy_observer_updated` event after each successful publish. It contains the overall score, top target and generation time.
 
 ## Dashboard preset
 
-A native dashboard preset is included and uses no custom cards. Open the Astronomy Observer Ingress page and press **Copy dashboard YAML**, or copy [`dashboard/astronomy-dashboard.yaml`](../dashboard/astronomy-dashboard.yaml) from the repository.
+A native dashboard preset is included and uses no custom cards. Open the Astronomy Observer panel and press **Copy dashboard YAML**, or copy [`dashboard/astronomy-dashboard.yaml`](../dashboard/astronomy-dashboard.yaml) from the repository.
 
 Create a separate Home Assistant dashboard, open its raw configuration editor and paste the preset. The app deliberately does not write to Home Assistant's dashboard storage or `configuration.yaml`.
 
@@ -216,15 +265,17 @@ actions:
         Best target: {{ states('sensor.astronomy_observer_top_target') }}.
 ```
 
-For more selective alerts, use `astronomy_observer_updated` and inspect score/target entities in conditions.
+For more selective alerts, use `astronomy_observer_updated` and inspect the score or target entities in conditions.
 
 ## Manual refresh
 
 The Ingress page has a **Refresh now** button. It asks the running service to perform a new refresh immediately. Normal refreshes continue on the configured schedule.
 
+Saving Observer Setup also triggers a refresh. The runtime reloads the persisted setup before every calculation, so changing the observer or simple horizon does not require restarting the app.
+
 ## Observing notes
 
-The Ingress page includes a small local observing log. After or during a session you can save any combination of:
+The Ingress page includes a local observing log. During or after a session you can save any combination of:
 
 - measured SQM;
 - estimated or measured seeing in arcseconds;
@@ -232,13 +283,13 @@ The Ingress page includes a small local observing log. After or during a session
 - naked-eye limiting magnitude;
 - a short free-text note.
 
-Each entry is saved with the current forecast component scores and the location label. Exact coordinates are not written to the log. The newest 50 entries can be reviewed in the Ingress page; the full append-only file remains in the app's persistent `/data` directory.
+Each entry is saved with the current forecast component scores and location label. Exact coordinates are not written to the log. The newest 50 entries can be reviewed in the Ingress page; the full append-only file remains in the app's persistent `/data` directory.
 
-The log is intended to make local calibration possible over time. It does not change the scoring model automatically in this release.
+The log is intended to support local calibration over time. It does not automatically change the scoring model in this release.
 
 ## Source failures
 
-The app does not silently invent missing observations. Weather has an independent provider fallback and a limited recent cache. Other changing sources have separate caches with age limits. The source-status entity and Ingress page show which source was used.
+The app does not invent missing observations. Weather has an independent provider fallback and a limited recent cache. Other changing sources have separate caches with age limits. The source-status entity and Ingress page show which source was used.
 
 If weather cannot be obtained from either provider and there is no recent cache, the refresh fails and the previous successful Home Assistant states remain in place. Check the app log and `sensor.astronomy_observer_last_update` before relying on an old result.
 
@@ -250,9 +301,10 @@ Useful log messages include:
 - `Open-Meteo unavailable` — the primary weather source failed and the fallback is being tried;
 - `MET Norway unavailable` — both live weather providers have failed;
 - `refresh failed` — no complete new snapshot could be produced;
+- `configuration reload failed` — a saved setup value or app configuration is invalid;
 - `Home Assistant state publish error` — the calculation succeeded but state publishing had a problem.
 
-If the Ingress page says it is waiting for the first calculation, inspect the app log first. Most first-start failures are either an invalid `person.*` entity, an invalid horizon mask, or temporary lack of weather data.
+If the Ingress page says it is waiting for the first calculation, inspect the app log first. Common first-start causes are temporary lack of weather data or an invalid manually entered advanced horizon mask.
 
 ## What the app is not
 

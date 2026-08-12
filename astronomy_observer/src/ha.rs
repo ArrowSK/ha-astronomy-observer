@@ -41,6 +41,45 @@ impl HaClient {
             .read_json()?)
     }
 
+    pub fn people(&self) -> AppResult<Vec<Value>> {
+        let states = self.get_json("/states")?;
+        let mut people = Vec::new();
+        for state in states.as_array().cloned().unwrap_or_default() {
+            let Some(entity_id) = state.get("entity_id").and_then(Value::as_str) else {
+                continue;
+            };
+            if !entity_id.starts_with("person.") {
+                continue;
+            }
+            let attributes = state.get("attributes").unwrap_or(&Value::Null);
+            let name = attributes
+                .get("friendly_name")
+                .and_then(Value::as_str)
+                .unwrap_or(entity_id);
+            let has_location = attributes.get("latitude").and_then(Value::as_f64).is_some()
+                && attributes.get("longitude").and_then(Value::as_f64).is_some();
+            people.push(json!({
+                "entity_id": entity_id,
+                "name": name,
+                "has_location": has_location
+            }));
+        }
+        people.sort_by(|a, b| {
+            let left = a
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            let right = b
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            left.cmp(&right)
+        });
+        Ok(people)
+    }
+
     pub fn location(&self, person: &str) -> AppResult<Location> {
         let cfg = self.get_json("/config")?;
         let home_lat = cfg

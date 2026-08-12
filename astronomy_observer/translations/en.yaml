@@ -1,10 +1,10 @@
 configuration:
   primary_person:
     name: Person to follow
-    description: Home Assistant person entity, for example person.alex. Leave blank to use Home Assistant's home coordinates.
+    description: Optional Home Assistant person entity. The easier way is to choose the observer from the Astronomy Observer Setup page. Leave blank to use Home.
   refresh_minutes:
     name: Refresh interval
-    description: Minutes between normal refreshes. The person's location is checked on every refresh.
+    description: Minutes between normal refreshes. The selected person's location is checked on every refresh.
   forecast_days:
     name: Forecast days
     description: Number of nights to include in the outlook.
@@ -12,8 +12,8 @@ configuration:
     name: Target search window
     description: Hours ahead used for tonight's target ranking.
   minimum_target_altitude:
-    name: Minimum target altitude
-    description: Targets below this altitude are excluded. The horizon mask can impose a higher limit by azimuth.
+    name: Lowest useful altitude
+    description: Targets below this altitude are excluded. For most users this single horizon setting is enough; 20 degrees is the general default.
   good_observing_threshold:
     name: Good-observing threshold
     description: Overall score at or above which the good-observing binary sensor is on.
@@ -24,29 +24,29 @@ configuration:
     name: Binocular aperture
     description: Objective diameter in millimetres. Set to 0 if binocular targets should not be considered.
   horizon_mask:
-    name: Horizon mask
-    description: Comma-separated azimuth:altitude points in degrees. Values are interpolated around the full horizon.
+    name: Advanced directional horizon
+    description: Optional azimuth:altitude points for users whose horizon is blocked differently in different directions. Leave the default unchanged unless you need this advanced control.
   sqm_override:
     name: Fixed SQM value
-    description: Moonless zenith sky brightness in mag/arcsec². Set to 0 to use the configured SQM sensor or imported light-pollution grid.
+    description: Optional moonless zenith sky brightness in mag/arcsec². Set to 0 to use the configured SQM sensor or optional atlas grid.
   sqm_entity:
     name: SQM sensor entity
     description: Optional Home Assistant sensor containing sky brightness in mag/arcsec². A fixed SQM value takes priority when both are configured.
   light_pollution_file:
-    name: Light-pollution grid file
-    description: CSV file in the app configuration folder containing latitude, longitude and artificial zenith radiance in mcd/m².
+    name: Optional light-pollution grid file
+    description: Optional CSV containing latitude, longitude and artificial zenith radiance. Nothing needs to be entered here if you do not use a Falchi atlas grid.
   nearby_dark_site_radius_km:
     name: Dark-site search radius
-    description: Maximum straight-line radius used to find a darker point in an imported light-pollution grid. Set to 0 to disable.
+    description: Maximum straight-line radius used to find a darker point when an imported light-pollution grid is available. Set to 0 to disable.
   enable_satellites:
     name: Visible satellites
-    description: Include bright satellite passes using current CelesTrak orbital elements.
+    description: Include selected visible satellite passes using current CelesTrak orbital elements. Unknown pass brightness is deliberately de-weighted.
   enable_aurora:
     name: Aurora forecast
     description: Include NOAA OVATION aurora probability when the product is available.
   enable_comets:
     name: Comets
-    description: Include potentially observable comets from current Minor Planet Center orbital elements.
+    description: Include potentially observable active comets from current Minor Planet Center orbital elements.
   external_location_precision:
     name: External coordinate precision
     description: Decimal places used when coordinates are sent to weather services. Local astronomy calculations keep the full Home Assistant location.
