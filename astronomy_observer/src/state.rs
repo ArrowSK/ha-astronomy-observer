@@ -138,11 +138,7 @@ pub fn publish(ha: &HaClient, snapshot: &Snapshot, threshold: f64) -> AppResult<
         snapshot.conditions.confidence,
     );
 
-    let timezone: Tz = snapshot
-        .location
-        .timezone
-        .parse()
-        .unwrap_or(chrono_tz::UTC);
+    let timezone: Tz = snapshot.location.timezone.parse().unwrap_or(chrono_tz::UTC);
     let window = match (snapshot.best_window_start, snapshot.best_window_end) {
         (Some(start), Some(end)) => format!(
             "{:02}:{:02}–{:02}:{:02}",
@@ -153,11 +149,7 @@ pub fn publish(ha: &HaClient, snapshot: &Snapshot, threshold: f64) -> AppResult<
         ),
         _ => "none".to_string(),
     };
-    let mut window_attributes = attrs(
-        "Astronomy Observer Best Window",
-        "mdi:clock-outline",
-        None,
-    );
+    let mut window_attributes = attrs("Astronomy Observer Best Window", "mdi:clock-outline", None);
     window_attributes["start_utc"] = json!(snapshot.best_window_start);
     window_attributes["end_utc"] = json!(snapshot.best_window_end);
     window_attributes["timezone"] = json!(snapshot.location.timezone);
@@ -313,12 +305,7 @@ pub fn publish(ha: &HaClient, snapshot: &Snapshot, threshold: f64) -> AppResult<
             let mut attributes = recommendation_attributes(recommendation);
             attributes["friendly_name"] = json!(friendly_name);
             attributes["icon"] = json!("mdi:star-outline");
-            publish_one(
-                ha,
-                &entity_id,
-                json!(recommendation.name),
-                attributes,
-            );
+            publish_one(ha, &entity_id, json!(recommendation.name), attributes);
         } else {
             publish_one(
                 ha,
@@ -378,7 +365,10 @@ pub fn publish(ha: &HaClient, snapshot: &Snapshot, threshold: f64) -> AppResult<
         aurora,
     );
 
-    let next_good_night = snapshot.outlook.iter().find(|night| night.score >= threshold);
+    let next_good_night = snapshot
+        .outlook
+        .iter()
+        .find(|night| night.score >= threshold);
     let mut next_attributes = attrs(
         "Astronomy Observer Next Good Night",
         "mdi:calendar-star",
@@ -425,7 +415,11 @@ pub fn publish(ha: &HaClient, snapshot: &Snapshot, threshold: f64) -> AppResult<
     publish_one(
         ha,
         "sensor.astronomy_observer_source_status",
-        json!(if snapshot.weather_stale { "degraded" } else { "ok" }),
+        json!(if snapshot.weather_stale {
+            "degraded"
+        } else {
+            "ok"
+        }),
         source_status,
     );
     publish_one(

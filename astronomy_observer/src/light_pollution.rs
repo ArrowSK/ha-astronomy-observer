@@ -81,11 +81,7 @@ pub fn lookup(
         let Some((lat, lon, artificial)) = parse_row(&line) else {
             continue;
         };
-        if !lat.is_finite()
-            || !lon.is_finite()
-            || !artificial.is_finite()
-            || artificial < 0.0
-        {
+        if !lat.is_finite() || !lon.is_finite() || !artificial.is_finite() || artificial < 0.0 {
             continue;
         }
 

@@ -2,7 +2,9 @@ use crate::config::AppConfig;
 use crate::error::{err, AppResult};
 use crate::ha::HaClient;
 use crate::models::{AstronomySample, HourlyWeather, Recommendation, Snapshot, WindowContext};
-use crate::{astro, aurora, comets, light_pollution, meteors, satellites, scoring, targets, weather};
+use crate::{
+    astro, aurora, comets, light_pollution, meteors, satellites, scoring, targets, weather,
+};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use std::collections::HashMap;
 use std::path::Path;
@@ -130,21 +132,17 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     }
 
     let hourly = scoring::hourly_scores(&weather_series, &samples, &sky_brightness);
-    let (best_window_start, best_window_end, conditions) = match scoring::best_window(
-        &hourly,
-        &samples,
-        now,
-        cfg.options.observing_window_hours,
-    ) {
-        Some((start, end, conditions)) => (Some(start), Some(end), conditions),
-        None => {
-            let conditions = hourly
-                .first()
-                .map(|entry| entry.1.clone())
-                .unwrap_or_default();
-            (None, None, conditions)
-        }
-    };
+    let (best_window_start, best_window_end, conditions) =
+        match scoring::best_window(&hourly, &samples, now, cfg.options.observing_window_hours) {
+            Some((start, end, conditions)) => (Some(start), Some(end), conditions),
+            None => {
+                let conditions = hourly
+                    .first()
+                    .map(|entry| entry.1.clone())
+                    .unwrap_or_default();
+                (None, None, conditions)
+            }
+        };
     let outlook = scoring::outlook(
         &hourly,
         &samples,
@@ -219,8 +217,7 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     candidates.extend(satellite_recommendations);
 
     let aurora = aurora::fetch(&location, &cfg.data_dir, cfg.options.enable_aurora);
-    if let Some(recommendation) =
-        aurora_recommendation(conditions.overall, &aurora, &samples, now)
+    if let Some(recommendation) = aurora_recommendation(conditions.overall, &aurora, &samples, now)
     {
         candidates.push(recommendation);
     }

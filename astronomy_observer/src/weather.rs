@@ -8,7 +8,8 @@ use std::path::Path;
 use std::time::Duration;
 use ureq::Agent;
 
-const USER_AGENT: &str = "AstronomyObserver/0.1 (+https://github.com/ArrowSK/ha-astronomy-observer)";
+const USER_AGENT: &str =
+    "AstronomyObserver/0.1 (+https://github.com/ArrowSK/ha-astronomy-observer)";
 
 fn agent() -> Agent {
     let config = Agent::config_builder()
@@ -34,28 +35,47 @@ fn parse_open_meteo_time(s: &str) -> Option<DateTime<Utc>> {
     NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M")
         .ok()
         .map(|x| x.and_utc())
-        .or_else(|| DateTime::parse_from_rfc3339(s).ok().map(|x| x.with_timezone(&Utc)))
+        .or_else(|| {
+            DateTime::parse_from_rfc3339(s)
+                .ok()
+                .map(|x| x.with_timezone(&Utc))
+        })
 }
 
 fn array_value(hourly: &Value, key: &str, index: usize) -> Option<f64> {
     hourly.get(key)?.as_array()?.get(index)?.as_f64()
 }
 
-fn fetch_air_quality(agent: &Agent, lat: &str, lon: &str, days: usize) -> AppResult<HashMap<i64, (Option<f64>, Option<f64>, Option<f64>)>> {
+fn fetch_air_quality(
+    agent: &Agent,
+    lat: &str,
+    lon: &str,
+    days: usize,
+) -> AppResult<HashMap<i64, (Option<f64>, Option<f64>, Option<f64>)>> {
     let url = format!(
         "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&hourly=aerosol_optical_depth,dust,pm2_5&timezone=UTC&forecast_days={days}"
     );
     let value = get_json(agent, &url, USER_AGENT)?;
-    let hourly = value.get("hourly").ok_or_else(|| err("Open-Meteo air-quality response has no hourly data"))?;
-    let times = hourly.get("time").and_then(Value::as_array).ok_or_else(|| err("Open-Meteo air-quality response has no times"))?;
+    let hourly = value
+        .get("hourly")
+        .ok_or_else(|| err("Open-Meteo air-quality response has no hourly data"))?;
+    let times = hourly
+        .get("time")
+        .and_then(Value::as_array)
+        .ok_or_else(|| err("Open-Meteo air-quality response has no times"))?;
     let mut map = HashMap::new();
     for (i, raw) in times.iter().enumerate() {
-        let Some(t) = raw.as_str().and_then(parse_open_meteo_time) else { continue; };
-        map.insert(t.timestamp(), (
-            array_value(hourly, "aerosol_optical_depth", i),
-            array_value(hourly, "dust", i),
-            array_value(hourly, "pm2_5", i),
-        ));
+        let Some(t) = raw.as_str().and_then(parse_open_meteo_time) else {
+            continue;
+        };
+        map.insert(
+            t.timestamp(),
+            (
+                array_value(hourly, "aerosol_optical_depth", i),
+                array_value(hourly, "dust", i),
+                array_value(hourly, "pm2_5", i),
+            ),
+        );
     }
     Ok(map)
 }
@@ -74,13 +94,23 @@ fn fetch_open_meteo(location: &Location, days: usize, precision: u32) -> AppResu
         "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly={variables}&timezone=UTC&forecast_days={days}&wind_speed_unit=kmh"
     );
     let value = get_json(&a, &url, USER_AGENT)?;
-    let hourly = value.get("hourly").ok_or_else(|| err("Open-Meteo response has no hourly data"))?;
-    let times = hourly.get("time").and_then(Value::as_array).ok_or_else(|| err("Open-Meteo response has no times"))?;
+    let hourly = value
+        .get("hourly")
+        .ok_or_else(|| err("Open-Meteo response has no hourly data"))?;
+    let times = hourly
+        .get("time")
+        .and_then(Value::as_array)
+        .ok_or_else(|| err("Open-Meteo response has no times"))?;
     let air = fetch_air_quality(&a, &lat, &lon, days).unwrap_or_default();
     let mut hours = Vec::with_capacity(times.len());
     for (i, raw) in times.iter().enumerate() {
-        let Some(time) = raw.as_str().and_then(parse_open_meteo_time) else { continue; };
-        let (aod, dust, pm25) = air.get(&time.timestamp()).copied().unwrap_or((None, None, None));
+        let Some(time) = raw.as_str().and_then(parse_open_meteo_time) else {
+            continue;
+        };
+        let (aod, dust, pm25) = air
+            .get(&time.timestamp())
+            .copied()
+            .unwrap_or((None, None, None));
         hours.push(HourlyWeather {
             time,
             temperature_c: array_value(hourly, "temperature_2m", i),
@@ -103,8 +133,15 @@ fn fetch_open_meteo(location: &Location, days: usize, precision: u32) -> AppResu
             pm25_ug_m3: pm25,
         });
     }
-    if hours.len() < 12 { return Err(err("Open-Meteo returned too few hourly records")); }
-    Ok(WeatherSeries { source: "Open-Meteo".to_string(), retrieved_at: Utc::now(), stale: false, hours })
+    if hours.len() < 12 {
+        return Err(err("Open-Meteo returned too few hourly records"));
+    }
+    Ok(WeatherSeries {
+        source: "Open-Meteo".to_string(),
+        retrieved_at: Utc::now(),
+        stale: false,
+        hours,
+    })
 }
 
 fn detail_number(details: &Value, key: &str) -> Option<f64> {
@@ -117,12 +154,26 @@ fn fetch_met_norway(location: &Location, precision: u32) -> AppResult<WeatherSer
     let lon = rounded(location.longitude, precision);
     let url = format!("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}&altitude={:.0}", location.elevation_m);
     let value = get_json(&a, &url, USER_AGENT)?;
-    let series = value.pointer("/properties/timeseries").and_then(Value::as_array).ok_or_else(|| err("MET Norway response has no timeseries"))?;
+    let series = value
+        .pointer("/properties/timeseries")
+        .and_then(Value::as_array)
+        .ok_or_else(|| err("MET Norway response has no timeseries"))?;
     let mut hours = Vec::with_capacity(series.len());
     for item in series {
-        let Some(time) = item.get("time").and_then(Value::as_str).and_then(|s| DateTime::parse_from_rfc3339(s).ok()).map(|t| t.with_timezone(&Utc)) else { continue; };
-        let details = item.pointer("/data/instant/details").unwrap_or(&Value::Null);
-        let precip = item.pointer("/data/next_1_hours/details/probability_of_precipitation").and_then(Value::as_f64);
+        let Some(time) = item
+            .get("time")
+            .and_then(Value::as_str)
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|t| t.with_timezone(&Utc))
+        else {
+            continue;
+        };
+        let details = item
+            .pointer("/data/instant/details")
+            .unwrap_or(&Value::Null);
+        let precip = item
+            .pointer("/data/next_1_hours/details/probability_of_precipitation")
+            .and_then(Value::as_f64);
         hours.push(HourlyWeather {
             time,
             temperature_c: detail_number(details, "air_temperature"),
@@ -139,47 +190,83 @@ fn fetch_met_norway(location: &Location, precision: u32) -> AppResult<WeatherSer
             ..Default::default()
         });
     }
-    if hours.len() < 12 { return Err(err("MET Norway returned too few hourly records")); }
-    Ok(WeatherSeries { source: "MET Norway".to_string(), retrieved_at: Utc::now(), stale: false, hours })
+    if hours.len() < 12 {
+        return Err(err("MET Norway returned too few hourly records"));
+    }
+    Ok(WeatherSeries {
+        source: "MET Norway".to_string(),
+        retrieved_at: Utc::now(),
+        stale: false,
+        hours,
+    })
 }
 
 fn save_cache(path: &Path, series: &WeatherSeries) {
     if let Ok(text) = serde_json::to_string(series) {
         let tmp = path.with_extension("tmp");
-        if fs::write(&tmp, text).is_ok() { let _ = fs::rename(tmp, path); }
+        if fs::write(&tmp, text).is_ok() {
+            let _ = fs::rename(tmp, path);
+        }
     }
 }
 
 fn load_cache(path: &Path) -> Option<WeatherSeries> {
     let text = fs::read_to_string(path).ok()?;
     let mut series: WeatherSeries = serde_json::from_str(&text).ok()?;
-    if Utc::now().signed_duration_since(series.retrieved_at).num_hours() > 12 { return None; }
+    if Utc::now()
+        .signed_duration_since(series.retrieved_at)
+        .num_hours()
+        > 12
+    {
+        return None;
+    }
     series.stale = true;
     series.source = format!("{} cache", series.source);
     Some(series)
 }
 
-pub fn fetch(location: &Location, days: usize, precision: u32, data_dir: &Path) -> AppResult<WeatherSeries> {
+pub fn fetch(
+    location: &Location,
+    days: usize,
+    precision: u32,
+    data_dir: &Path,
+) -> AppResult<WeatherSeries> {
     let cache = data_dir.join("weather_cache.json");
     match fetch_open_meteo(location, days, precision) {
-        Ok(series) => { save_cache(&cache, &series); return Ok(series); }
+        Ok(series) => {
+            save_cache(&cache, &series);
+            return Ok(series);
+        }
         Err(e) => eprintln!("Open-Meteo unavailable: {e}"),
     }
     match fetch_met_norway(location, precision) {
-        Ok(series) => { save_cache(&cache, &series); return Ok(series); }
+        Ok(series) => {
+            save_cache(&cache, &series);
+            return Ok(series);
+        }
         Err(e) => eprintln!("MET Norway unavailable: {e}"),
     }
-    load_cache(&cache).ok_or_else(|| err("weather providers failed and no recent cache is available"))
+    load_cache(&cache)
+        .ok_or_else(|| err("weather providers failed and no recent cache is available"))
 }
 
 pub fn nearest(series: &WeatherSeries, time: DateTime<Utc>) -> Option<&HourlyWeather> {
-    series.hours.iter().min_by_key(|h| (h.time.timestamp() - time.timestamp()).abs())
+    series
+        .hours
+        .iter()
+        .min_by_key(|h| (h.time.timestamp() - time.timestamp()).abs())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test] fn parses_open_meteo_time_without_zone() {
-        assert_eq!(parse_open_meteo_time("2026-08-12T15:00").unwrap().timestamp(), 1786546800);
+    #[test]
+    fn parses_open_meteo_time_without_zone() {
+        assert_eq!(
+            parse_open_meteo_time("2026-08-12T15:00")
+                .unwrap()
+                .timestamp(),
+            1786546800
+        );
     }
 }

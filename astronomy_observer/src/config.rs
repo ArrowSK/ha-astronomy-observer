@@ -82,7 +82,9 @@ impl AppConfig {
             return Err(err("good_observing_threshold must be between 1 and 100"));
         }
         if options.sqm_override != 0.0 && !(15.0..=23.0).contains(&options.sqm_override) {
-            return Err(err("sqm_override must be 0 or between 15 and 23 mag/arcsec²"));
+            return Err(err(
+                "sqm_override must be 0 or between 15 and 23 mag/arcsec²",
+            ));
         }
         if !options.sqm_entity.trim().is_empty() && !options.sqm_entity.starts_with("sensor.") {
             return Err(err("sqm_entity must be a sensor.* entity"));

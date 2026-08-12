@@ -96,10 +96,7 @@ fn validate_observation(input: &ObservationInput) -> Result<(), &'static str> {
     {
         return Err("Seeing must be between 0.1 and 20 arcseconds");
     }
-    if input
-        .transparency
-        .is_some_and(|v| !(1..=5).contains(&v))
-    {
+    if input.transparency.is_some_and(|v| !(1..=5).contains(&v)) {
         return Err("Transparency must be between 1 and 5");
     }
     if input
@@ -207,10 +204,10 @@ fn handle_observation(
         limiting_magnitude: input.limiting_magnitude,
         notes: input.notes.trim().to_string(),
         forecast_score: current.as_ref().map(|value| value.conditions.overall),
-        forecast_transparency: current
+        forecast_transparency: current.as_ref().map(|value| value.conditions.transparency),
+        forecast_seeing_proxy: current
             .as_ref()
-            .map(|value| value.conditions.transparency),
-        forecast_seeing_proxy: current.as_ref().map(|value| value.conditions.seeing_estimate),
+            .map(|value| value.conditions.seeing_estimate),
     };
     match append_observation(&observation_path(data_dir), &record) {
         Ok(()) => {
@@ -218,16 +215,15 @@ fn handle_observation(
         }
         Err(error) => {
             eprintln!("Could not save observation: {error}");
-            let _ = request.respond(json_response(json!({"error": "could not save observation"}), 500));
+            let _ = request.respond(json_response(
+                json!({"error": "could not save observation"}),
+                500,
+            ));
         }
     }
 }
 
-pub fn serve(
-    snapshot: Arc<RwLock<Option<Snapshot>>>,
-    refresh_tx: Sender<()>,
-    data_dir: PathBuf,
-) {
+pub fn serve(snapshot: Arc<RwLock<Option<Snapshot>>>, refresh_tx: Sender<()>, data_dir: PathBuf) {
     std::thread::spawn(move || {
         let server = match Server::http("0.0.0.0:8099") {
             Ok(server) => server,
@@ -243,9 +239,8 @@ pub fn serve(
                 .map(|address| !allowed(address.ip()))
                 .unwrap_or(true)
             {
-                let _ = request.respond(
-                    Response::from_string("forbidden").with_status_code(StatusCode(403)),
-                );
+                let _ = request
+                    .respond(Response::from_string("forbidden").with_status_code(StatusCode(403)));
                 continue;
             }
 

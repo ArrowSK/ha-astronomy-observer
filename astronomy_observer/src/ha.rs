@@ -100,7 +100,9 @@ impl HaClient {
         if entity_id.trim().is_empty() {
             return None;
         }
-        let value = self.get_json(&format!("/states/{}", entity_id.trim())).ok()?;
+        let value = self
+            .get_json(&format!("/states/{}", entity_id.trim()))
+            .ok()?;
         let state = value.get("state")?.as_str()?;
         let number = state.parse::<f64>().ok()?;
         number.is_finite().then_some(number)

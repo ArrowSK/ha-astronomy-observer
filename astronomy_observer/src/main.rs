@@ -81,11 +81,9 @@ fn run() -> AppResult<()> {
                         snapshot.recommendations.len(),
                         snapshot.weather_source
                     );
-                    if let Err(error) = state::publish(
-                        &ha,
-                        &snapshot,
-                        cfg.options.good_observing_threshold,
-                    ) {
+                    if let Err(error) =
+                        state::publish(&ha, &snapshot, cfg.options.good_observing_threshold)
+                    {
                         eprintln!("Home Assistant state publish error: {error}");
                     }
                     if let Ok(mut guard) = shared.write() {

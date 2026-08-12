@@ -8,7 +8,8 @@ use std::time::Duration;
 use ureq::Agent;
 
 const URL: &str = "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json";
-const USER_AGENT: &str = "AstronomyObserver/0.1 (+https://github.com/ArrowSK/ha-astronomy-observer)";
+const USER_AGENT: &str =
+    "AstronomyObserver/0.1 (+https://github.com/ArrowSK/ha-astronomy-observer)";
 const MAX_CACHE_AGE_SECONDS: i64 = 3 * 3600;
 
 #[derive(Deserialize)]
