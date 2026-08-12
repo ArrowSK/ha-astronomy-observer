@@ -14,21 +14,24 @@ Astronomical positions, light-pollution lookup and target geometry are calculate
 
 The default configuration works without a `person` entity. In that case the app uses the latitude, longitude, elevation and time zone configured for Home Assistant.
 
-After the first successful refresh, open the Astronomy Observer panel and press the **cogwheel** button. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.
+After the first successful refresh, open the Astronomy Observer panel, open the hamburger menu and choose **Setup**. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.
 
 If a selected person temporarily has no usable latitude and longitude, the app falls back to Home rather than failing the entire refresh.
 
 The first refresh can take longer than later refreshes because the app may need to collect current weather, comet and satellite data. The bundled light-pollution lookup is local and does not add a network request.
 
-## Top toolbar
+## Header menu and bottom navigation
 
-The normal Ingress toolbar is intentionally compact:
+The Ingress header keeps the two most important navigation controls separated with large touch targets:
 
-- the **notes** icon opens and closes the local observing-notes panel;
-- the **refresh** icon requests an immediate recalculation;
-- the **cogwheel** icon opens and closes Setup.
+- the **refresh** icon remains directly visible beside the title and requests an immediate recalculation;
+- the **hamburger menu** sits to its right and contains **Setup** and the **Observation journal**, each with its own icon and title.
 
-The optional dashboard-YAML action is not kept in the normal toolbar because it is generally only needed during initial dashboard setup. It is available inside the Setup panel instead.
+The Observation journal uses a document icon to distinguish it from an edit action. Menu rows and header buttons use generous spacing to reduce accidental taps on touch screens.
+
+A persistent bottom navigation bar provides direct jumps to **Tonight**, **Conditions**, **Targets**, **Outlook** and **Sources**. The currently viewed section is highlighted as the page scrolls. The bar includes mobile safe-area padding so it does not sit under the system gesture area.
+
+The optional dashboard-YAML action is not kept in the permanent header because it is generally only needed during initial dashboard setup. It remains available inside the Setup panel.
 
 ## Setup panel
 
@@ -77,7 +80,7 @@ Observers with better local data can still use a fixed SQM value, a Home Assista
 
 ### Dashboard preset
 
-The Setup panel contains **Copy dashboard YAML** for the optional native dashboard preset. It is deliberately placed here rather than in the permanent toolbar because most users only need it once.
+The Setup panel contains **Copy dashboard YAML** for the optional native dashboard preset. It is deliberately placed here rather than in the permanent header because most users only need it once.
 
 ## Conditions in the best window
 
@@ -87,7 +90,7 @@ This section is presented as two visually distinct label/value lists.
 
 **Forecast conditions** contains the physical or forecast inputs behind those scores, including total/low/mid/high cloud, visibility, aerosol optical depth, surface wind, 200 hPa wind, dew margin, Moon illumination and sky brightness/light pollution.
 
-Every row is clickable. Opening a row expands its explanation immediately below that row, so the displayed value remains next to its label while the interpretation stays available without a separate help panel. Only one explanation is kept open at a time to keep the section compact.
+Every row is clickable. Opening a row expands its explanation immediately below that row, so the displayed value remains next to its label while the interpretation stays available without a separate help panel. Only one explanation is kept open at a time to keep the section compact. Expandable explanations use slightly larger text and line spacing than before because they are hidden until requested.
 
 The sky-brightness/light-pollution row also shows the active source and the Falchi/GFZ World Atlas reference. When atlas data are in use, the explanation can include artificial zenith luminance and distance to the selected atlas cell centre.
 
@@ -276,7 +279,7 @@ The app also fires an `astronomy_observer_updated` event after each successful p
 
 ## Dashboard preset
 
-A native dashboard preset is included and uses no custom cards. Open the Astronomy Observer panel, press the **cogwheel** button and use **Copy dashboard YAML** in the Dashboard preset section, or copy [`dashboard/astronomy-dashboard.yaml`](../dashboard/astronomy-dashboard.yaml) from the repository.
+A native dashboard preset is included and uses no custom cards. Open the Astronomy Observer panel, open the hamburger menu, choose **Setup** and use **Copy dashboard YAML** in the Dashboard preset section, or copy [`dashboard/astronomy-dashboard.yaml`](../dashboard/astronomy-dashboard.yaml) from the repository.
 
 Create a separate Home Assistant dashboard, open its raw configuration editor and paste the preset. The app deliberately does not write to Home Assistant's dashboard storage or `configuration.yaml`.
 
@@ -304,13 +307,13 @@ For more selective alerts, use `astronomy_observer_updated` and inspect the scor
 
 ## Manual refresh
 
-The circular-arrow icon in the top toolbar asks the running service to perform a new refresh immediately. The icon spins while the request is in progress. Normal refreshes continue on the configured schedule.
+The circular-arrow icon in the header, between the title area and hamburger menu, asks the running service to perform a new refresh immediately. The icon spins while the request is in progress. Normal refreshes continue on the configured schedule.
 
 Saving Observer Setup also triggers a refresh. The runtime reloads the persisted setup before every calculation, so changing the observer or simple horizon does not require restarting the app.
 
 ## Observing notes and history
 
-Observing Notes are hidden during normal use and opened from the notes icon in the top toolbar. During or after a session you can save any combination of:
+The Observation journal is hidden during normal use and opened from the document-icon entry in the hamburger menu. During or after a session you can save any combination of:
 
 - measured SQM;
 - estimated or measured seeing in arcseconds;

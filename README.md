@@ -42,9 +42,9 @@ In Home Assistant, add this repository to the app store:
 
 `https://github.com/ArrowSK/ha-astronomy-observer`
 
-Install **Astronomy Observer** and start it. The default configuration uses Home Assistant's Home coordinates. After the first successful refresh, open Astronomy Observer and use the **cogwheel** button to choose a Home Assistant person and the lowest useful altitude for the observing site. Saving closes Setup automatically and triggers a recalculation.
+Install **Astronomy Observer** and start it. The default configuration uses Home Assistant's Home coordinates. After the first successful refresh, open Astronomy Observer and open the hamburger menu, choose **Setup**, and select a Home Assistant person and the lowest useful altitude for the observing site. Saving closes Setup automatically and triggers a recalculation.
 
-The top toolbar uses compact icons for observing notes, manual refresh and Setup. The dashboard YAML copy action is inside Setup because it is normally only needed when creating the optional native dashboard.
+The header keeps manual refresh directly accessible and places **Setup** and the **Observation journal** in a spaced hamburger menu. The journal uses a document icon rather than an edit/pencil symbol. A persistent bottom navigation bar jumps between Tonight, Conditions, Targets, Outlook and Sources, with the current section highlighted while scrolling. The dashboard YAML copy action remains inside Setup because it is normally only needed when creating the optional native dashboard.
 
 No light-pollution file is required. Astronomy Observer looks up the selected location in its bundled approximately 3-arcminute World Atlas grid and uses the resulting sky-brightness estimate in the initial overall, deep-sky and imaging scores. A real SQM sensor, a fixed SQM value or a higher-resolution local grid can still override that estimate.
 
@@ -73,4 +73,4 @@ Third-party code and data keep their own licences. The bundled World Atlas deriv
 
 ## Release status
 
-`0.2.1` remains marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and the bundled light-pollution atlas is a 2015 planning baseline rather than a live sky-quality measurement.
+`0.2.2` remains marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and the bundled light-pollution atlas is a 2015 planning baseline rather than a live sky-quality measurement.

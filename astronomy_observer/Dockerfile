@@ -31,7 +31,7 @@ COPY scripts/build_catalog.py ./build_catalog.py
 RUN python3 build_catalog.py NGC.csv addendum.csv catalog.tsv
 
 FROM ghcr.io/home-assistant/base:3.24
-ARG BUILD_VERSION=0.2.1
+ARG BUILD_VERSION=0.2.2
 ARG BUILD_ARCH
 LABEL io.hass.version="${BUILD_VERSION}" \
       io.hass.type="app" \

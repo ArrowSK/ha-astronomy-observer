@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2 - 2026-08-13
+
+- Added a persistent Android-style bottom navigation bar for quick jumps between Tonight, Conditions, Targets, Outlook and Sources.
+- Added active-section highlighting to the bottom navigation while scrolling and safe-area padding for mobile devices.
+- Reworked the header so manual refresh remains directly accessible while Setup and the Observation journal live in a spaced hamburger menu.
+- Replaced the observation pencil with a document-style journal icon.
+- Increased header, menu and bottom-navigation touch targets and spacing to reduce accidental taps.
+- Increased the text size and line spacing of expandable condition explanations and advanced Setup explanations.
+- Kept Setup auto-close-on-save, observation search/filtering, condition scoring, target ranking and Home Assistant entities unchanged.
+- Extended repository validation to require the new menu and bottom-navigation markers.
+
 ## 0.2.1 - 2026-08-12
 
 - Reworked **Conditions in the best window** into compact label/value lists instead of tiles.
