@@ -23,3 +23,18 @@ jobs:
       app: astronomy_observer
       publish: ${{ github.event_name == 'push' }}
     secrets: inherit
+
+  verify-public-image:
+    name: Verify public multi-arch image
+    needs: build-app
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Inspect image without registry credentials
+        run: |
+          docker buildx imagetools inspect ghcr.io/arrowsk/ha-astronomy-observer:latest > /tmp/image.txt
+          cat /tmp/image.txt
+          grep -q 'linux/amd64' /tmp/image.txt
+          grep -q 'linux/arm64' /tmp/image.txt

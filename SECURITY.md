@@ -1,6 +1,6 @@
 # Security
 
-Astronomy Observer runs as a Home Assistant app with Ingress and Home Assistant's default AppArmor restrictions. It does not request privileged mode, host networking, Docker access or write access to Home Assistant configuration.
+Astronomy Observer runs as a Home Assistant app with Ingress and a project-specific AppArmor profile. The profile starts from Home Assistant's normal S6/Bashio requirements and then grants only the runtime paths, network access and read/write locations the app needs. It does not request privileged mode, host networking, Docker access or write access to Home Assistant configuration.
 
 The Ingress HTTP service accepts requests only from Home Assistant's Ingress proxy address or loopback. The app panel is admin-only because the in-memory result includes the selected observing location.
 

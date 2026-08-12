@@ -73,8 +73,8 @@ def validate_manifest() -> None:
         fail("expected aarch64 and amd64 architectures")
     if not config.get("homeassistant_api") or not config.get("ingress"):
         fail("Home Assistant API and Ingress must be enabled")
-    if "apparmor" in config:
-        fail("custom AppArmor profile must not replace the Supervisor default")
+    if config.get("apparmor") is False:
+        fail("AppArmor must remain enabled")
     if config.get("panel_admin") is not True:
         fail("Ingress panel must remain admin-only")
     if not str(config.get("watchdog", "")).startswith("tcp://"):
@@ -152,8 +152,15 @@ def validate_docs() -> None:
 
 def validate_licensing_and_pins() -> None:
     license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
-    if "https://polyformproject.org/licenses/noncommercial/1.0.0" not in license_text:
-        fail("PolyForm canonical URL missing from LICENSE")
+    canonical_fragments = [
+        "# PolyForm Noncommercial License 1.0.0",
+        "<https://polyformproject.org/licenses/noncommercial/1.0.0>",
+        "Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.",
+        "**Use** means anything you do with the software requiring one of your licenses.",
+    ]
+    for fragment in canonical_fragments:
+        if fragment not in license_text:
+            fail("canonical PolyForm Noncommercial 1.0.0 text is incomplete or modified")
     if "Required Notice: Copyright 2026 ArrowSK" not in license_text:
         fail("required copyright notice missing from LICENSE")
 
