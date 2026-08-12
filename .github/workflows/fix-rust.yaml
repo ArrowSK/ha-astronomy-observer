@@ -1,0 +1,50 @@
+name: Apply Rust compile fixes
+
+on:
+  push:
+    branches:
+      - initial-implementation
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: initial-implementation
+
+      - name: Apply compiler fixes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          for name in ("comets.rs", "targets.rs"):
+              path = Path("astronomy_observer/src") / name
+              text = path.read_text()
+              text = text.replace("use crate::astro;\n", "", 1)
+              path.write_text(text)
+
+          path = Path("astronomy_observer/src/scoring.rs")
+          text = path.read_text()
+          text = text.replace("let mut quality = 0.0;", "let mut quality: f64 = 0.0;")
+          text = text.replace("let mut qweight = 0.0;", "let mut qweight: f64 = 0.0;")
+          text = text.replace("let mut score = 1.0;", "let mut score: f64 = 1.0;")
+          text = text.replace("let mut known = 0.0;", "let mut known: f64 = 0.0;")
+          text = text.replace(".take_while(|(t, _)| **t <= t0 + Duration::hours(2))", ".take_while(|(t, _)| *t <= t0 + Duration::hours(2))")
+          path.write_text(text)
+          PY
+
+      - name: Format changed Rust source
+        run: cargo fmt --manifest-path astronomy_observer/Cargo.toml --all
+
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add astronomy_observer/src
+          git commit -m "Fix initial Rust compiler errors"
+          git push origin HEAD:initial-implementation
