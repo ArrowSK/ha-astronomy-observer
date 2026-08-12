@@ -18,29 +18,28 @@ struct Shower {
     speed: f64,
 }
 
+fn parse_line(line: &str) -> Option<Shower> {
+    let p: Vec<&str> = line.split(',').collect();
+    if p.len() < 11 {
+        return None;
+    }
+    Some(Shower {
+        name: p[0].trim().to_string(),
+        start: (p[1].trim().parse().ok()?, p[2].trim().parse().ok()?),
+        peak: (p[3].trim().parse().ok()?, p[4].trim().parse().ok()?),
+        end: (p[5].trim().parse().ok()?, p[6].trim().parse().ok()?),
+        ra: p[7].trim().parse().ok()?,
+        dec: p[8].trim().parse().ok()?,
+        zhr: p[9].trim().parse().ok()?,
+        speed: p[10].trim().parse().ok()?,
+    })
+}
+
 fn parse(path: &Path) -> Vec<Shower> {
     let Ok(text) = fs::read_to_string(path) else {
         return Vec::new();
     };
-    text.lines()
-        .skip(1)
-        .filter_map(|line| {
-            let p: Vec<&str> = line.split(',').collect();
-            if p.len() < 12 {
-                return None;
-            }
-            Some(Shower {
-                name: p[0].to_string(),
-                start: (p[2].parse().ok()?, p[3].parse().ok()?),
-                peak: (p[4].parse().ok()?, p[5].parse().ok()?),
-                end: (p[6].parse().ok()?, p[7].parse().ok()?),
-                ra: p[8].parse().ok()?,
-                dec: p[9].parse().ok()?,
-                zhr: p[10].parse().ok()?,
-                speed: p[11].parse().ok()?,
-            })
-        })
-        .collect()
+    text.lines().skip(1).filter_map(parse_line).collect()
 }
 
 fn dates_for_year(sh: &Shower, year: i32) -> Option<(NaiveDate, NaiveDate, NaiveDate)> {
@@ -60,7 +59,9 @@ fn dates_for_year(sh: &Shower, year: i32) -> Option<(NaiveDate, NaiveDate, Naive
 
 fn active_peak(sh: &Shower, date: NaiveDate) -> Option<(NaiveDate, f64)> {
     for y in [date.year() - 1, date.year(), date.year() + 1] {
-        let (start, peak, end) = dates_for_year(sh, y)?;
+        let Some((start, peak, end)) = dates_for_year(sh, y) else {
+            continue;
+        };
         if date >= start && date <= end {
             let dist = (date - peak).num_days().abs() as f64;
             let span = ((end - start).num_days() as f64 / 5.0).max(1.0);
@@ -156,4 +157,31 @@ pub fn recommendations(
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_bundled_csv_schema() {
+        let shower = parse_line("Perseids,7,17,8,12,8,24,48,58,100,59").unwrap();
+        assert_eq!(shower.name, "Perseids");
+        assert_eq!(shower.start, (7, 17));
+        assert_eq!(shower.peak, (8, 12));
+        assert_eq!(shower.end, (8, 24));
+        assert!((shower.ra - 48.0).abs() < 1e-9);
+        assert!((shower.dec - 58.0).abs() < 1e-9);
+        assert!((shower.zhr - 100.0).abs() < 1e-9);
+        assert!((shower.speed - 59.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn perseids_are_active_on_peak_date() {
+        let shower = parse_line("Perseids,7,17,8,12,8,24,48,58,100,59").unwrap();
+        let date = NaiveDate::from_ymd_opt(2026, 8, 12).unwrap();
+        let (peak, activity) = active_peak(&shower, date).unwrap();
+        assert_eq!(peak, date);
+        assert!((activity - 1.0).abs() < 1e-9);
+    }
 }

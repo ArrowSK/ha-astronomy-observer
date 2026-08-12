@@ -6,6 +6,9 @@
 - Limited the final list to one satellite and one comet while allowing a broader mix of deep-sky objects, planets, meteor showers, the Moon, the Milky Way and aurora when relevant.
 - De-weighted satellite passes when brightness is not modelled, with stronger penalties for rocket bodies and debris and a smaller penalty for familiar high-interest spacecraft.
 - Excluded `A/`-designated asteroid-like objects from comet recommendations.
+- Fixed the OpenNGC catalogue build so J2000 right ascension and declination are converted from OpenNGC sexagesimal values into the decimal-degree format used by the runtime, and the magnitude, surface-brightness and size fields are mapped to the correct columns.
+- Fixed the bundled meteor-shower CSV parser so major showers, including the Perseids, are actually loaded and ranked.
+- Added regression/self-tests for the OpenNGC coordinate conversion and meteor-shower CSV schema.
 - Added a Home Assistant person selector to the Ingress Setup panel and persisted the selection without requiring a restart.
 - Simplified horizon setup to a single lowest-useful-altitude choice for normal use while keeping the directional mask under an advanced section.
 - Clarified that the Falchi CSV is optional and that the app works without any light-pollution file.

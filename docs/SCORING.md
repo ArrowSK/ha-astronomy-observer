@@ -196,10 +196,12 @@ The component scores published as the "best window" are averages across that sel
 
 ## Airmass and horizon
 
-Deep-sky and solar-system targets are scored only when they are above both:
+Targets are scored only when they are above both:
 
-- the configured global minimum altitude; and
-- the interpolated local horizon at that azimuth.
+- the configured lowest useful altitude; and
+- the optional directional horizon at that azimuth.
+
+For normal use the single lowest-useful-altitude value is enough. The directional mask is an advanced override for sites where buildings, trees or terrain differ substantially by direction.
 
 Airmass uses the Kasten-Young approximation:
 
@@ -207,7 +209,7 @@ Airmass uses the Kasten-Young approximation:
 X = 1 / (sin(h) + 0.50572 × (h + 6.07995)^-1.6364)
 ```
 
-where `h` is apparent altitude in degrees. Airmass then penalises targets close to the horizon even when they have technically cleared the mask.
+where `h` is apparent altitude in degrees. Airmass then penalises targets close to the horizon even when they have technically cleared the limit.
 
 Reference: Kasten, F. & Young, A. T. (1989), *Revised optical air mass tables and approximation formula*, Applied Optics 28(22), 4735–4738.
 
@@ -225,6 +227,8 @@ For each catalogue target and each candidate time, the score combines:
 - aperture-based feasibility.
 
 The catalogue is deliberately compact rather than a dump of every NGC/IC row. The build keeps all Messier cross-references and selects brighter or large visually relevant objects from OpenNGC.
+
+OpenNGC stores right ascension as `HH:MM:SS.SS` and declination as signed `DD:MM:SS.SS`. The image build converts those J2000 coordinates to decimal degrees before the runtime catalogue is written. The build also maps V magnitude, B magnitude, galaxy surface brightness and major-axis size into explicit columns. A self-test covers the coordinate conversion so a schema mismatch cannot silently turn the deep-sky catalogue into an empty recommendation set.
 
 ### Aperture gate
 
@@ -249,6 +253,8 @@ The bundled shower table contains recurring activity periods, approximate peak d
 - Moon interference;
 - approximate activity strength around the nominal peak.
 
+The bundled CSV schema is covered by a runtime unit test. This matters because a malformed column mapping would otherwise remove every shower from the candidate list without affecting the rest of the app.
+
 Actual annual peak timing, radiant drift and outbursts can differ. For a serious meteor session, check the current International Meteor Organization calendar as well.
 
 ## Comets
@@ -256,6 +262,8 @@ Actual annual peak timing, radiant drift and outbursts can differ. For a serious
 Current Minor Planet Center orbital elements are propagated locally using a two-body solution. The app estimates total magnitude from the supplied `H` and slope parameters when present, then applies altitude, Moon and deep-sky condition penalties.
 
 Comet photometry and non-gravitational motion can depart substantially from a simple prediction. The recommendation is a planning filter, not a precision ephemeris for acquisition or imaging.
+
+Objects with an `A/` designation are excluded from the comet recommendations because that designation is used for asteroid-like objects rather than an active comet observing recommendation.
 
 ## Satellites
 
@@ -265,7 +273,28 @@ CelesTrak visual-group orbital elements are propagated locally with SGP4. The pa
 - altitude above the local horizon;
 - whether the satellite is approximately sunlit while the observer is in darkness.
 
-The visual group is intended to keep the calculation small and relevant. Magnitude is not predicted because reliable optical brightness depends strongly on attitude and geometry.
+The visual group is intended to keep the calculation small and relevant. Magnitude is not predicted because reliable optical brightness depends strongly on attitude and geometry. For that reason satellite scores are deliberately reduced before the final Top 10 is selected. Rocket bodies and debris receive the strongest reduction; familiar high-interest spacecraft such as the ISS receive a smaller one. This prevents an accurately predicted high pass with unknown brightness from outranking genuinely strong astronomical targets merely because its altitude is easy to score.
+
+## Final Top 10 selection
+
+The final list is not a raw sort of every candidate class. After each target has its own observing score, Astronomy Observer applies category limits so one class cannot crowd out the observing programme.
+
+Current maximums are:
+
+```text
+deep sky        6
+planets         3
+Moon            1
+comet           1
+satellite       1
+meteor shower   1
+Milky Way       1
+aurora          1
+```
+
+The limits are ceilings, not quotas. The app does not force a weak comet, satellite or any other class into the list. Candidates below the minimum usefulness threshold are dropped, and the list may contain fewer than ten entries when the night or configured equipment does not support ten worthwhile choices.
+
+This diversity stage is intentionally separate from the physical condition score. It exists to answer a practical observing question: "what are the most worthwhile things to spend time on tonight?" rather than "which ten independently scored rows have the largest numbers?"
 
 ## Data confidence
 
