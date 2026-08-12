@@ -1,0 +1,41 @@
+name: Normalize source
+
+on:
+  push:
+    branches:
+      - initial-implementation
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: initial-implementation
+
+      - name: Install Rust 1.89 toolchain
+        run: rustup toolchain install 1.89.0 --profile minimal --component rustfmt
+
+      - name: Select Rust 1.89
+        run: rustup default 1.89.0
+
+      - name: Format Rust and lock dependencies
+        run: |
+          cargo fmt --manifest-path astronomy_observer/Cargo.toml --all
+          cargo generate-lockfile --manifest-path astronomy_observer/Cargo.toml
+
+      - name: Commit normalized sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add astronomy_observer/src astronomy_observer/Cargo.lock
+          if git diff --cached --quiet; then
+            echo "No normalization changes were needed."
+            exit 0
+          fi
+          git commit -m "Format Rust source and lock dependencies"
+          git push origin HEAD:initial-implementation
