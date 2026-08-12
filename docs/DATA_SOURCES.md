@@ -15,7 +15,7 @@ Astronomy Observer keeps each outside source replaceable and cached separately. 
 | Comets | Minor Planet Center elements | second MPC comet-elements endpoint | 12 h normal cache; stale cache rejected after 7 d |
 | Satellites | CelesTrak visual GP data | recent local cache | 12 h normal cache; stale cache rejected after 48 h |
 | Aurora | NOAA SWPC OVATION | recent local cache | Live request; stale cache rejected after 3 h |
-| Light pollution | fixed SQM / HA SQM sensor / user atlas grid | unknown | Local only |
+| Light pollution | fixed SQM / HA SQM sensor / optional local grid / bundled World Atlas | unknown outside usable coverage | Local only; selected location checked every refresh |
 
 ## Weather: Open-Meteo
 
@@ -33,7 +33,7 @@ The primary forecast requests hourly:
 
 A second Open-Meteo air-quality request supplies aerosol optical depth, dust and PM2.5 when available.
 
-Coordinates are rounded before these requests according to `external_location_precision`. The local astronomy calculations do not use the rounded coordinates.
+Coordinates are rounded before these requests according to `external_location_precision`. The local astronomy and light-pollution calculations do not use the rounded coordinates.
 
 Documentation: https://open-meteo.com/en/docs and https://open-meteo.com/en/docs/air-quality-api
 
@@ -99,9 +99,15 @@ Current annual calendars should be checked for exact maximum times, Moon circums
 
 Source: https://www.imo.net/resources/calendar/
 
-## Light pollution: Falchi atlas
+## Light pollution: Falchi World Atlas
 
-The project does not bundle the World Atlas of Artificial Night Sky Brightness. The official GFZ dataset is large and is distributed under CC BY-NC 4.0 with its own access/attribution conditions. Users who obtain it can create a local grid with the included conversion tool.
+Astronomy Observer bundles an approximately 3-arcminute global lookup derivative of the 2015 World Atlas of Artificial Night Sky Brightness. It is generated from the official approximately 30-arcsecond GFZ GeoTIFF and stored as a compact binary grid of artificial zenith luminance.
+
+At runtime the selected Home Assistant location is looked up locally. No light-pollution request is made to an outside service and no user file is required. The resulting artificial luminance is converted to an estimated moonless SQM-style sky brightness and supplied to the darkness-sensitive scores.
+
+A fixed SQM value, valid Home Assistant SQM sensor or optional higher-resolution local CSV takes priority over the bundled atlas. The local CSV is therefore an expert override rather than a normal installation requirement.
+
+The World Atlas data and the bundled derivative are CC BY-NC 4.0. See [Light pollution and sky brightness](LIGHT_POLLUTION.md), the bundled data notice, and the repository third-party licence file for the transformation and attribution.
 
 Dataset: https://dataservices.gfz-potsdam.de/contact/showshort.php?id=escidoc:1541893
 
@@ -111,4 +117,4 @@ Paper: Falchi et al. (2016), *The new world atlas of artificial night sky bright
 
 Changing network data are stored in the app's persistent `/data` volume. They are not exposed through Home Assistant configuration and survive normal app restarts/upgrades according to Supervisor volume handling.
 
-The app configuration folder mounted at `/config` is read-only and is used only for user-supplied files such as `light_pollution.csv`.
+The app configuration folder mounted at `/config` is read-only and is used only for optional user-supplied files such as `light_pollution.csv`.
