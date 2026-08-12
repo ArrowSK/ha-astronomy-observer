@@ -249,10 +249,7 @@ impl BinaryAtlas {
         if code == ATLAS_NODATA {
             return None;
         }
-        Some(
-            self.radiance_floor
-                * (10.0_f64.powf(code as f64 / self.log_scale) - 1.0),
-        )
+        Some(self.radiance_floor * (10.0_f64.powf(code as f64 / self.log_scale) - 1.0))
     }
 
     fn read_cell(&mut self, row: usize, col: usize) -> io::Result<Option<f64>> {
@@ -286,8 +283,7 @@ impl BinaryAtlas {
         if radius_km <= 0.0 {
             return Ok(None);
         }
-        let Some((base_row, base_col)) =
-            self.cell_for(location.latitude, location.longitude)
+        let Some((base_row, base_col)) = self.cell_for(location.latitude, location.longitude)
         else {
             return Ok(None);
         };
@@ -295,10 +291,8 @@ impl BinaryAtlas {
         let max_rows = ((radius_km / (111.32 * self.cell_lat)).ceil() as isize + 1)
             .min(self.height as isize - 1)
             .max(0);
-        let longitude_km_per_degree =
-            111.32 * location.latitude.to_radians().cos().abs().max(0.05);
-        let max_cols = ((radius_km / (longitude_km_per_degree * self.cell_lon)).ceil()
-            as isize
+        let longitude_km_per_degree = 111.32 * location.latitude.to_radians().cos().abs().max(0.05);
+        let max_cols = ((radius_km / (longitude_km_per_degree * self.cell_lon)).ceil() as isize
             + 2)
         .min((self.width as isize - 1) / 2)
         .max(0);
@@ -322,18 +316,13 @@ impl BinaryAtlas {
                 };
 
                 let byte_index = col * 2;
-                let code =
-                    u16::from_le_bytes([row_bytes[byte_index], row_bytes[byte_index + 1]]);
+                let code = u16::from_le_bytes([row_bytes[byte_index], row_bytes[byte_index + 1]]);
                 let Some(artificial) = self.decode(code) else {
                     continue;
                 };
                 let (latitude, longitude) = self.cell_centre(row, col);
-                let distance = haversine_km(
-                    location.latitude,
-                    location.longitude,
-                    latitude,
-                    longitude,
-                );
+                let distance =
+                    haversine_km(location.latitude, location.longitude, latitude, longitude);
                 if distance > radius_km {
                     continue;
                 }
@@ -458,11 +447,8 @@ pub fn lookup(
         return (custom_sky, custom_dark);
     }
 
-    let (bundled_sky, bundled_dark) = binary_lookup(
-        location,
-        Path::new(BUNDLED_ATLAS_PATH),
-        dark_radius_km,
-    );
+    let (bundled_sky, bundled_dark) =
+        binary_lookup(location, Path::new(BUNDLED_ATLAS_PATH), dark_radius_km);
     if bundled_sky.sqm_mag_arcsec2.is_some() {
         return (bundled_sky, bundled_dark);
     }
@@ -504,9 +490,7 @@ mod tests {
         let cell_lat = 1.0_f64;
         let scale = 8000.0_f64;
         let floor = 0.0001_f64;
-        let values = [
-            2.0, 0.2, 3.0, 4.0, 2.5, 1.0, 3.5, 4.5, 3.0, 2.0, 4.0, 5.0,
-        ];
+        let values = [2.0, 0.2, 3.0, 4.0, 2.5, 1.0, 3.5, 4.5, 3.0, 2.0, 4.0, 5.0];
 
         let mut file = File::create(path).unwrap();
         file.write_all(ATLAS_MAGIC).unwrap();
@@ -552,7 +536,10 @@ mod tests {
     #[test]
     fn binary_atlas_uses_location_and_finds_darker_cell() {
         let dir = std::env::temp_dir();
-        let path = dir.join(format!("astronomy-observer-atlas-{}.bin", std::process::id()));
+        let path = dir.join(format!(
+            "astronomy-observer-atlas-{}.bin",
+            std::process::id()
+        ));
         write_test_atlas(&path);
         let location = Location {
             latitude: 2.5,
