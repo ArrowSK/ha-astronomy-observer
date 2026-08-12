@@ -1,0 +1,219 @@
+name: Apply 0.2.2 interface update once
+
+on:
+  push:
+    paths:
+      - .github/workflows/release-022-once.yaml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Apply interface and documentation update
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+          app = root / 'astronomy_observer'
+          index_path = app / 'web/index.html'
+          index = index_path.read_text(encoding='utf-8')
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'expected {label} block not found')
+              return text.replace(old, new, 1)
+
+          index = replace_once(
+              index,
+              '    main { width: min(1120px, 100%); margin: 0 auto; padding: 22px 18px 42px; }\n'
+              '    header { display: flex; gap: 18px; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }',
+              '    html { scroll-behavior: smooth; }\n'
+              '    main { width: min(1120px, 100%); margin: 0 auto; padding: 22px 18px calc(104px + env(safe-area-inset-bottom)); }\n'
+              '    header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; margin-bottom: 18px; position: relative; }\n'
+              '    .header-title { min-width: 0; }\n'
+              '    .header-title #where { overflow-wrap: anywhere; }\n'
+              '    .header-actions { display: flex; align-items: center; gap: 12px; }',
+              'header layout',
+          )
+          index = index.replace('    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }\n', '')
+          index = replace_once(
+              index,
+              '    .icon-button {\n'
+              '      width: 38px; height: 38px; padding: 0; display: grid; place-items: center; font-size: 20px;\n'
+              '      line-height: 1; font-weight: 500;\n'
+              '    }',
+              '    .icon-button {\n'
+              '      width: 48px; height: 48px; padding: 0; display: grid; place-items: center; font-size: 20px;\n'
+              '      line-height: 1; font-weight: 500; flex: 0 0 48px;\n'
+              '    }\n'
+              '    .icon-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }\n'
+              '    .menu-wrap { position: relative; }\n'
+              '    .app-menu { position: absolute; z-index: 60; right: 0; top: 56px; width: min(280px, calc(100vw - 36px)); padding: 7px; border: 1px solid var(--line); border-radius: 12px; background: #111a2a; box-shadow: 0 14px 40px rgba(0,0,0,.36); }\n'
+              '    .menu-item { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 13px; padding: 10px 12px; border-color: transparent; background: transparent; text-align: left; }\n'
+              '    .menu-item + .menu-item { margin-top: 5px; }\n'
+              '    .menu-item:hover { background: rgba(255,255,255,.045); border-color: var(--line); }\n'
+              '    .menu-item svg { width: 23px; height: 23px; flex: 0 0 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }\n'
+              '    .menu-item strong { display: block; color: var(--text); font-size: 14px; }\n'
+              '    .menu-item small { display: block; margin-top: 1px; color: var(--muted); font-size: 12px; line-height: 1.3; }',
+              'touch targets and menu styles',
+          )
+          index = replace_once(
+              index,
+              '    .condition-detail { padding: 0 12px 11px; color: var(--muted); font-size: 12px; }\n'
+              '    .condition-reference { margin-top: 6px; color: #b8c5da; }',
+              '    .condition-detail { padding: 2px 12px 13px; color: var(--muted); font-size: 14px; line-height: 1.55; }\n'
+              '    .condition-reference { margin-top: 8px; color: #b8c5da; font-size: 13.5px; line-height: 1.5; }',
+              'condition explanation styles',
+          )
+          index = replace_once(
+              index,
+              '    details { margin-top: 10px; }\n    summary { cursor: pointer; color: var(--muted); }',
+              '    details { margin-top: 10px; }\n'
+              '    summary { cursor: pointer; color: var(--muted); }\n'
+              '    .setup-box details .foot { font-size: 14px; line-height: 1.55; }\n'
+              '    .nav-target { scroll-margin-top: 18px; scroll-margin-bottom: 104px; }\n'
+              '    .bottom-nav { position: fixed; z-index: 50; left: 50%; bottom: 0; transform: translateX(-50%); width: min(1120px, 100%); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 7px 10px calc(7px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(9,13,22,.96); backdrop-filter: blur(16px); box-shadow: 0 -10px 28px rgba(0,0,0,.24); }\n'
+              '    .bottom-nav a { min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 3px; border-radius: 11px; color: var(--muted); text-decoration: none; touch-action: manipulation; }\n'
+              '    .bottom-nav a:hover { color: var(--text); background: rgba(255,255,255,.035); }\n'
+              '    .bottom-nav a.active { color: var(--accent); background: #15243b; }\n'
+              '    .bottom-nav svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }\n'
+              '    .bottom-nav span { font-size: 11px; font-weight: 650; line-height: 1.15; }',
+              'bottom navigation styles',
+          )
+          index = replace_once(
+              index,
+              '    @media (max-width: 760px) {\n      header { display: block; }\n      .toolbar { justify-content: flex-start; margin-top: 12px; }',
+              '    @media (max-width: 760px) {\n      header { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }\n      h1 { font-size: 22px; }\n      .header-actions { gap: 10px; }',
+              'mobile header styles',
+          )
+
+          old_header = '''  <header>\n    <div>\n      <h1>Astronomy Observer</h1>\n      <p class="muted" id="where">Waiting for the first calculation…</p>\n    </div>\n    <div class="toolbar" aria-label="Astronomy Observer actions">\n      <button id="notes-button" class="icon-button" aria-label="Observing notes" title="Observing notes">✎</button>\n      <button id="refresh" class="icon-button" aria-label="Refresh now" title="Refresh now">↻</button>\n      <button id="setup-button" class="icon-button" aria-label="Setup" title="Setup" aria-expanded="false">⚙</button>\n    </div>\n  </header>'''
+          new_header = '''  <header id="top" class="nav-target">\n    <div class="header-title">\n      <h1>Astronomy Observer</h1>\n      <p class="muted" id="where">Waiting for the first calculation…</p>\n    </div>\n    <div class="header-actions" aria-label="Astronomy Observer actions">\n      <button id="refresh" class="icon-button" aria-label="Refresh now" title="Refresh now">\n        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5"/><path d="M19 11a7.5 7.5 0 1 0 1 5"/></svg>\n      </button>\n      <div class="menu-wrap">\n        <button id="menu-button" class="icon-button" aria-label="Open menu" title="Menu" aria-haspopup="menu" aria-expanded="false">\n          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>\n        </button>\n        <div id="app-menu" class="app-menu" role="menu" hidden>\n          <button id="setup-button" class="menu-item" type="button" role="menuitem" aria-controls="setup-card" aria-expanded="false">\n            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"/></svg>\n            <span><strong>Setup</strong><small>Observer, horizon and dashboard</small></span>\n          </button>\n          <button id="notes-button" class="menu-item" type="button" role="menuitem" aria-controls="notes-card" aria-expanded="false">\n            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></svg>\n            <span><strong>Observation journal</strong><small>Notes, history, search and filters</small></span>\n          </button>\n        </div>\n      </div>\n    </div>\n  </header>'''
+          index = replace_once(index, old_header, new_header, 'header controls')
+
+          for old, new, label in [
+              ('<section class="card hero">', '<section id="overview" class="card hero nav-target">', 'overview anchor'),
+              ('<section class="card conditions">', '<section id="conditions" class="card conditions nav-target">', 'conditions anchor'),
+              ('<section class="card targets">', '<section id="targets" class="card targets nav-target">', 'targets anchor'),
+              ('<section class="card outlook">', '<section id="outlook" class="card outlook nav-target">', 'outlook anchor'),
+              ('<section class="card sources">', '<section id="sources" class="card sources nav-target">', 'sources anchor'),
+          ]:
+              index = replace_once(index, old, new, label)
+
+          nav = '''\n<nav id="bottom-nav" class="bottom-nav" aria-label="Astronomy Observer sections">\n  <a href="#overview" data-nav="overview" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg><span>Tonight</span></a>\n  <a href="#conditions" data-nav="conditions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M8 12h8M10 17h4"/><circle cx="7" cy="7" r="1"/><circle cx="17" cy="12" r="1"/><circle cx="9" cy="17" r="1"/></svg><span>Conditions</span></a>\n  <a href="#targets" data-nav="targets"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>Targets</span></a>\n  <a href="#outlook" data-nav="outlook"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Outlook</span></a>\n  <a href="#sources" data-nav="sources"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg><span>Sources</span></a>\n</nav>\n'''
+          index = replace_once(index, '</main>\n<script>', '</main>' + nav + '<script>', 'bottom navigation markup')
+
+          old_handlers = '''$('setup-button').addEventListener('click', async () => {\n  const opening = $('setup-card').hidden;\n  $('setup-card').hidden = !opening;\n  $('setup-button').classList.toggle('active', opening);\n  $('setup-button').setAttribute('aria-expanded', String(opening));\n  if (opening && !setupLoaded) await loadSetup();\n});\n\n$('notes-button').addEventListener('click', async () => {\n  const opening = $('notes-card').hidden;\n  $('notes-card').hidden = !opening;\n  $('notes-button').classList.toggle('active', opening);\n  if (opening && !notesLoaded) await loadObservations();\n});'''
+          new_handlers = '''function closeAppMenu() {\n  $('app-menu').hidden = true;\n  $('menu-button').setAttribute('aria-expanded', 'false');\n  $('menu-button').classList.remove('active');\n}\n\n$('menu-button').addEventListener('click', event => {\n  event.stopPropagation();\n  const opening = $('app-menu').hidden;\n  $('app-menu').hidden = !opening;\n  $('menu-button').setAttribute('aria-expanded', String(opening));\n  $('menu-button').classList.toggle('active', opening);\n});\n\ndocument.addEventListener('click', event => {\n  if (!$('app-menu').hidden && !event.target.closest('.menu-wrap')) closeAppMenu();\n});\n\ndocument.addEventListener('keydown', event => {\n  if (event.key === 'Escape') closeAppMenu();\n});\n\n$('setup-button').addEventListener('click', async () => {\n  const opening = $('setup-card').hidden;\n  closeAppMenu();\n  $('notes-card').hidden = true;\n  $('notes-button').setAttribute('aria-expanded', 'false');\n  $('setup-card').hidden = !opening;\n  $('setup-button').setAttribute('aria-expanded', String(opening));\n  if (opening) {\n    if (!setupLoaded) await loadSetup();\n    $('setup-card').scrollIntoView({behavior:'smooth', block:'start'});\n  }\n});\n\n$('notes-button').addEventListener('click', async () => {\n  const opening = $('notes-card').hidden;\n  closeAppMenu();\n  $('setup-card').hidden = true;\n  $('setup-button').setAttribute('aria-expanded', 'false');\n  $('notes-card').hidden = !opening;\n  $('notes-button').setAttribute('aria-expanded', String(opening));\n  if (opening) {\n    if (!notesLoaded) await loadObservations();\n    $('notes-card').scrollIntoView({behavior:'smooth', block:'start'});\n  }\n});'''
+          index = replace_once(index, old_handlers, new_handlers, 'menu handlers')
+          index = index.replace("    $('setup-button').classList.remove('active');\n", '')
+
+          nav_js = '''\nconst bottomNavLinks = [...document.querySelectorAll('#bottom-nav a[data-nav]')];\nconst bottomNavSections = bottomNavLinks.map(link => $(link.dataset.nav)).filter(Boolean);\nlet bottomNavTicking = false;\n\nfunction setBottomNavActive(id) {\n  bottomNavLinks.forEach(link => {\n    const active = link.dataset.nav === id;\n    link.classList.toggle('active', active);\n    if (active) link.setAttribute('aria-current', 'page');\n    else link.removeAttribute('aria-current');\n  });\n}\n\nfunction updateBottomNav() {\n  bottomNavTicking = false;\n  if (!bottomNavSections.length) return;\n  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80) {\n    setBottomNavActive(bottomNavSections[bottomNavSections.length - 1].id);\n    return;\n  }\n  const reference = Math.min(window.innerHeight * 0.34, 240);\n  let active = bottomNavSections[0].id;\n  bottomNavSections.forEach(section => {\n    if (section.getBoundingClientRect().top <= reference) active = section.id;\n  });\n  setBottomNavActive(active);\n}\n\nwindow.addEventListener('scroll', () => {\n  if (bottomNavTicking) return;\n  bottomNavTicking = true;\n  requestAnimationFrame(updateBottomNav);\n}, {passive:true});\n\nbottomNavLinks.forEach(link => link.addEventListener('click', () => setBottomNavActive(link.dataset.nav)));\n'''
+          index = replace_once(index, '\nload();\nsetInterval(load, 60000);', nav_js + '\nload();\nupdateBottomNav();\nsetInterval(load, 60000);', 'bottom navigation behaviour')
+          index_path.write_text(index, encoding='utf-8')
+
+          config_path = app / 'config.yaml'
+          config = config_path.read_text(encoding='utf-8')
+          config = replace_once(config, 'version: "0.2.1"', 'version: "0.2.2"', 'app version')
+          config_path.write_text(config, encoding='utf-8')
+
+          docker_path = app / 'Dockerfile'
+          docker = docker_path.read_text(encoding='utf-8')
+          docker = replace_once(docker, 'ARG BUILD_VERSION=0.2.1', 'ARG BUILD_VERSION=0.2.2', 'image version')
+          docker_path.write_text(docker, encoding='utf-8')
+
+          validator_path = root / 'tests/validate_repository.py'
+          validator = validator_path.read_text(encoding='utf-8')
+          validator = replace_once(
+              validator,
+              '        "notes-button",\n        "history-search",',
+              '        "notes-button",\n        "menu-button",\n        "app-menu",\n        "bottom-nav",\n        "data-nav=\\"conditions\\"",\n        "data-nav=\\"targets\\"",\n        "data-nav=\\"outlook\\"",\n        "data-nav=\\"sources\\"",\n        "history-search",',
+              'validator navigation markers',
+          )
+          validator_path.write_text(validator, encoding='utf-8')
+
+          changelog_path = app / 'CHANGELOG.md'
+          changelog = changelog_path.read_text(encoding='utf-8')
+          entry = '''## 0.2.2 - 2026-08-13\n\n- Added a persistent Android-style bottom navigation bar for quick jumps between Tonight, Conditions, Targets, Outlook and Sources.\n- Added active-section highlighting to the bottom navigation while scrolling and safe-area padding for mobile devices.\n- Reworked the header so manual refresh remains directly accessible while Setup and the Observation journal live in a spaced hamburger menu.\n- Replaced the observation pencil with a document-style journal icon.\n- Increased header, menu and bottom-navigation touch targets and spacing to reduce accidental taps.\n- Increased the text size and line spacing of expandable condition explanations and advanced Setup explanations.\n- Kept Setup auto-close-on-save, observation search/filtering, condition scoring, target ranking and Home Assistant entities unchanged.\n- Extended repository validation to require the new menu and bottom-navigation markers.\n\n'''
+          changelog = replace_once(changelog, '# Changelog\n\n', '# Changelog\n\n' + entry, 'changelog heading')
+          changelog_path.write_text(changelog, encoding='utf-8')
+
+          readme_path = root / 'README.md'
+          readme = readme_path.read_text(encoding='utf-8')
+          readme = replace_once(readme, 'use the **cogwheel** button to choose a Home Assistant person and the lowest useful altitude for the observing site.', 'open the hamburger menu, choose **Setup**, and select a Home Assistant person and the lowest useful altitude for the observing site.', 'README setup instruction')
+          readme = replace_once(readme, 'The top toolbar uses compact icons for observing notes, manual refresh and Setup. The dashboard YAML copy action is inside Setup because it is normally only needed when creating the optional native dashboard.', 'The header keeps manual refresh directly accessible and places **Setup** and the **Observation journal** in a spaced hamburger menu. The journal uses a document icon rather than an edit/pencil symbol. A persistent bottom navigation bar jumps between Tonight, Conditions, Targets, Outlook and Sources, with the current section highlighted while scrolling. The dashboard YAML copy action remains inside Setup because it is normally only needed when creating the optional native dashboard.', 'README navigation paragraph')
+          readme = replace_once(readme, '`0.2.1` remains marked experimental', '`0.2.2` remains marked experimental', 'README release status')
+          readme_path.write_text(readme, encoding='utf-8')
+
+          app_readme_path = app / 'README.md'
+          app_readme = app_readme_path.read_text(encoding='utf-8')
+          app_readme = replace_once(app_readme, 'use the **cogwheel** button to choose the observer and a simple lowest-useful-altitude horizon.', 'open the hamburger menu, choose **Setup**, and select the observer and a simple lowest-useful-altitude horizon.', 'app README setup instruction')
+          app_readme = replace_once(app_readme, 'The top toolbar also contains a refresh icon and an observing-notes icon. Observation history is collapsed by default and can be searched or filtered when opened. The dashboard YAML copy action lives inside Setup because it is normally only needed during initial configuration.', 'The header keeps the refresh icon directly available and places **Setup** and the **Observation journal** in a hamburger menu with generous touch spacing. The journal uses a document icon. A persistent bottom navigation bar jumps between Tonight, Conditions, Targets, Outlook and Sources. Observation history is collapsed by default and can be searched or filtered when opened. The dashboard YAML copy action lives inside Setup because it is normally only needed during initial configuration.', 'app README navigation paragraph')
+          app_readme_path.write_text(app_readme, encoding='utf-8')
+
+          docs_path = app / 'DOCS.md'
+          docs = docs_path.read_text(encoding='utf-8')
+          docs = replace_once(docs, 'After the first successful refresh, open the Astronomy Observer panel and press the **cogwheel** button. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.', 'After the first successful refresh, open the Astronomy Observer panel, open the hamburger menu and choose **Setup**. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.', 'DOCS first-start instruction')
+          old_toolbar = '''## Top toolbar\n\nThe normal Ingress toolbar is intentionally compact:\n\n- the **notes** icon opens and closes the local observing-notes panel;\n- the **refresh** icon requests an immediate recalculation;\n- the **cogwheel** icon opens and closes Setup.\n\nThe optional dashboard-YAML action is not kept in the normal toolbar because it is generally only needed during initial dashboard setup. It is available inside the Setup panel instead.'''
+          new_toolbar = '''## Header menu and bottom navigation\n\nThe Ingress header keeps the two most important navigation controls separated with large touch targets:\n\n- the **refresh** icon remains directly visible beside the title and requests an immediate recalculation;\n- the **hamburger menu** sits to its right and contains **Setup** and the **Observation journal**, each with its own icon and title.\n\nThe Observation journal uses a document icon to distinguish it from an edit action. Menu rows and header buttons use generous spacing to reduce accidental taps on touch screens.\n\nA persistent bottom navigation bar provides direct jumps to **Tonight**, **Conditions**, **Targets**, **Outlook** and **Sources**. The currently viewed section is highlighted as the page scrolls. The bar includes mobile safe-area padding so it does not sit under the system gesture area.\n\nThe optional dashboard-YAML action is not kept in the permanent header because it is generally only needed during initial dashboard setup. It remains available inside the Setup panel.'''
+          docs = replace_once(docs, old_toolbar, new_toolbar, 'DOCS navigation section')
+          docs = replace_once(docs, 'Every row is clickable. Opening a row expands its explanation immediately below that row, so the displayed value remains next to its label while the interpretation stays available without a separate help panel. Only one explanation is kept open at a time to keep the section compact.', 'Every row is clickable. Opening a row expands its explanation immediately below that row, so the displayed value remains next to its label while the interpretation stays available without a separate help panel. Only one explanation is kept open at a time to keep the section compact. Expandable explanations use slightly larger text and line spacing than before because they are hidden until requested.', 'DOCS explanation text')
+          docs = replace_once(docs, 'Open the Astronomy Observer panel, press the **cogwheel** button and use **Copy dashboard YAML** in the Dashboard preset section,', 'Open the Astronomy Observer panel, open the hamburger menu, choose **Setup** and use **Copy dashboard YAML** in the Dashboard preset section,', 'DOCS dashboard instruction')
+          docs = replace_once(docs, 'The circular-arrow icon in the top toolbar asks the running service to perform a new refresh immediately.', 'The circular-arrow icon in the header, between the title area and hamburger menu, asks the running service to perform a new refresh immediately.', 'DOCS refresh instruction')
+          docs = replace_once(docs, 'Observing Notes are hidden during normal use and opened from the notes icon in the top toolbar.', 'The Observation journal is hidden during normal use and opened from the document-icon entry in the hamburger menu.', 'DOCS journal instruction')
+          docs = docs.replace('rather than in the permanent toolbar because most users only need it once.', 'rather than in the permanent header because most users only need it once.')
+          docs_path.write_text(docs, encoding='utf-8')
+          PY
+
+      - name: Validate updated repository
+        shell: bash
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 tests/validate_repository.py
+          python3 -m py_compile tests/validate_repository.py
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import re
+
+          text = Path('astronomy_observer/web/index.html').read_text(encoding='utf-8')
+          class Parser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = []
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if 'id' in values:
+                      self.ids.append(values['id'])
+          parser = Parser()
+          parser.feed(text)
+          duplicates = sorted({value for value in parser.ids if parser.ids.count(value) > 1})
+          if duplicates:
+              raise SystemExit(f'duplicate HTML ids: {duplicates}')
+          script = re.search(r'<script>(.*)</script>', text, re.S)
+          if not script:
+              raise SystemExit('script block not found')
+          Path('/tmp/astronomy-observer.js').write_text(script.group(1), encoding='utf-8')
+          PY
+          node --check /tmp/astronomy-observer.js
+          git diff --check
+
+      - name: Commit directly to main
+        shell: bash
+        run: |
+          rm .github/workflows/release-022-once.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release Astronomy Observer 0.2.2"
+          git push origin HEAD:main
