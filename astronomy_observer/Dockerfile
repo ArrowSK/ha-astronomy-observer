@@ -1,11 +1,11 @@
 FROM rust:1.89-alpine3.22 AS rust-builder
 WORKDIR /build
 RUN apk add --no-cache musl-dev
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY web ./web
 COPY dashboard ./dashboard
-RUN cargo build --release
+RUN cargo build --locked --release
 
 FROM alpine:3.22 AS astronomy-builder
 ARG ASTRONOMY_ENGINE_COMMIT=61dc07020aaa6885d2c7f688a4d82beaf6edb9ef
