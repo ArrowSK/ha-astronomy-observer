@@ -1,0 +1,27 @@
+{
+  "format": "Astronomy Observer atlas grid v1",
+  "source": "Falchi et al. (2016), New World Atlas of Artificial Night Sky Brightness",
+  "source_doi": "10.5880/GFZ.1.4.2016.001",
+  "source_reference_year": 2015,
+  "source_grid_arcsec": 30,
+  "license": "CC BY-NC 4.0",
+  "downsample_factor": 6,
+  "width": 7200,
+  "height": 2901,
+  "west": -180.00000000000003,
+  "south": -59.995775115499924,
+  "east": 179.99985600000005,
+  "north": 85.0541668645001,
+  "cell_lon_deg": 0.04999998000000001,
+  "cell_lat_deg": 0.049999980000000006,
+  "cell_arcmin_nominal": 2.9999988000000006,
+  "encoding": {
+    "type": "uint16 logarithmic artificial zenith luminance",
+    "unit": "mcd/m2",
+    "no_data": 65535,
+    "log_scale": 8000.0,
+    "radiance_floor": 0.0001
+  },
+  "bytes": 41774464,
+  "sha256": "d89a64a382c8b867ecfbb9e68a0e85b281316a9aed86fe38330a7eb13ccf0d41"
+}
