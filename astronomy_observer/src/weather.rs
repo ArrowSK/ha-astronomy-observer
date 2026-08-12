@@ -51,7 +51,7 @@ fn fetch_air_quality(
     lat: &str,
     lon: &str,
     days: usize,
-) -> AppResult<HashMap<i64, (Option<f64>, Option<f64>, Option<f64>)>> {
+) -> AppResult<AirQualityByTime> {
     let url = format!(
         "https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&hourly=aerosol_optical_depth,dust,pm2_5&timezone=UTC&forecast_days={days}"
     );

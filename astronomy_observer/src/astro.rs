@@ -85,10 +85,7 @@ fn parse_output(text: &str) -> AppResult<Vec<AstronomySample>> {
     Ok(map.into_values().collect())
 }
 
-pub fn sample_nearest<'a>(
-    samples: &'a [AstronomySample],
-    t: DateTime<Utc>,
-) -> Option<&'a AstronomySample> {
+pub fn sample_nearest(samples: &[AstronomySample], t: DateTime<Utc>) -> Option<&AstronomySample> {
     samples
         .iter()
         .min_by_key(|s| (s.time.timestamp() - t.timestamp()).abs())

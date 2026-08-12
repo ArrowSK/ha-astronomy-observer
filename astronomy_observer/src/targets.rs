@@ -166,6 +166,7 @@ fn light_pollution_target_factor(d: &Dso, sky: &SkyBrightness) -> f64 {
     (1.0 - sensitivity * (1.0 - base) * 0.75).clamp(0.2, 1.0)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn deep_sky(
     cfg: &AppConfig,
     catalog: &Path,

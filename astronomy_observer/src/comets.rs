@@ -254,6 +254,7 @@ fn equipment(mag: f64, cfg: &AppConfig) -> Option<String> {
     None
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn recommendations(
     cfg: &AppConfig,
     lat: f64,

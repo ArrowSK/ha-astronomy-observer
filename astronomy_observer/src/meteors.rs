@@ -70,6 +70,7 @@ fn active_peak(sh: &Shower, date: NaiveDate) -> Option<(NaiveDate, f64)> {
     None
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn recommendations(
     cfg: &AppConfig,
     path: &Path,
