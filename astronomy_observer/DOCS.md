@@ -14,19 +14,29 @@ Astronomical positions, light-pollution lookup and target geometry are calculate
 
 The default configuration works without a `person` entity. In that case the app uses the latitude, longitude, elevation and time zone configured for Home Assistant.
 
-After the first successful refresh, open the Astronomy Observer panel and press **Setup**. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.
+After the first successful refresh, open the Astronomy Observer panel and press the **cogwheel** button. The observer field lists the `person.*` entities already available in Home Assistant, so there is normally no need to type an entity ID by hand.
 
 If a selected person temporarily has no usable latitude and longitude, the app falls back to Home rather than failing the entire refresh.
 
 The first refresh can take longer than later refreshes because the app may need to collect current weather, comet and satellite data. The bundled light-pollution lookup is local and does not add a network request.
 
+## Top toolbar
+
+The normal Ingress toolbar is intentionally compact:
+
+- the **notes** icon opens and closes the local observing-notes panel;
+- the **refresh** icon requests an immediate recalculation;
+- the **cogwheel** icon opens and closes Setup.
+
+The optional dashboard-YAML action is not kept in the normal toolbar because it is generally only needed during initial dashboard setup. It is available inside the Setup panel instead.
+
 ## Setup panel
 
-The Setup panel is intended for the settings most people need frequently.
+The Setup panel is intended for the settings most people need frequently. A successful **Save and refresh** stores the values, closes Setup automatically and starts a recalculation. The recalculation continues after the panel closes.
 
 ### Observer
 
-Choose **Home** or one of the Home Assistant people shown in the list. Saving the setting triggers a refresh immediately.
+Choose **Home** or one of the Home Assistant people shown in the list.
 
 The selection is stored in the app's persistent data folder and overrides the `primary_person` value from the app configuration until it is changed again from Setup.
 
@@ -59,7 +69,27 @@ Nothing needs to be configured. Astronomy Observer includes a compact approximat
 
 The resulting moonless sky-brightness estimate feeds the darkness component immediately, so the headline, deep-sky and imaging scores already reflect the current location's light pollution.
 
+The Ingress interface shows both the currently selected sky-brightness source and the dataset reference:
+
+Falchi, F. et al. (2016), *The New World Atlas of Artificial Night Sky Brightness*, GFZ Data Services, DOI `10.5880/GFZ.1.4.2016.001`.
+
 Observers with better local data can still use a fixed SQM value, a Home Assistant SQM sensor or an optional higher-resolution local CSV. Those inputs take priority over the bundled atlas. See [Light pollution and sky brightness](../docs/LIGHT_POLLUTION.md).
+
+### Dashboard preset
+
+The Setup panel contains **Copy dashboard YAML** for the optional native dashboard preset. It is deliberately placed here rather than in the permanent toolbar because most users only need it once.
+
+## Conditions in the best window
+
+This section is presented as two visually distinct label/value lists.
+
+**Observing quality** contains calculated observing scores such as deep-sky observing, planetary observing, imaging, clear-sky factor, transparency, estimated seeing, darkness and Moon interference.
+
+**Forecast conditions** contains the physical or forecast inputs behind those scores, including total/low/mid/high cloud, visibility, aerosol optical depth, surface wind, 200 hPa wind, dew margin, Moon illumination and sky brightness/light pollution.
+
+Every row is clickable. Opening a row expands its explanation immediately below that row, so the displayed value remains next to its label while the interpretation stays available without a separate help panel. Only one explanation is kept open at a time to keep the section compact.
+
+The sky-brightness/light-pollution row also shows the active source and the Falchi/GFZ World Atlas reference. When atlas data are in use, the explanation can include artificial zenith luminance and distance to the selected atlas cell centre.
 
 ## Full app configuration
 
@@ -120,7 +150,7 @@ The app uses this priority order:
 : Optional Home Assistant `sensor.*` entity whose state is an SQM-style value in mag/arcsec².
 
 `light_pollution_file`
-: Optional file name inside the app configuration folder. Default: `light_pollution.csv`. The file does not need to exist. It is now an optional higher-resolution/local override rather than a requirement for atlas-based scoring.
+: Optional file name inside the app configuration folder. Default: `light_pollution.csv`. The file does not need to exist. It is an optional higher-resolution/local override rather than a requirement for atlas-based scoring.
 
 `nearby_dark_site_radius_km`
 : Straight-line radius used to search for a materially darker atlas cell. Default: 75 km. The bundled atlas is used automatically unless a valid custom local grid has taken priority. Set to 0 to disable. This is a sky-quality search, not a route, access or safety check.
@@ -157,8 +187,6 @@ The headline score is 0–100, but it is not intended to be read alone. The app 
 The score is deterministic and its current formula is documented in [SCORING.md](../docs/SCORING.md). The weights are engineering choices for observing decisions rather than a published meteorological standard. This is why the component scores and raw inputs remain visible.
 
 The built-in World Atlas estimate enters through the darkness component. In the current formula, darkness contributes to the headline overall score and has greater influence on deep-sky work, while planetary observing is intentionally much less sensitive to city light pollution.
-
-The condition tiles in the Ingress page are clickable. Opening a tile explains what the quantity means and how it is used.
 
 ## Best-target ranking
 
@@ -248,7 +276,7 @@ The app also fires an `astronomy_observer_updated` event after each successful p
 
 ## Dashboard preset
 
-A native dashboard preset is included and uses no custom cards. Open the Astronomy Observer panel and press **Copy dashboard YAML**, or copy [`dashboard/astronomy-dashboard.yaml`](../dashboard/astronomy-dashboard.yaml) from the repository.
+A native dashboard preset is included and uses no custom cards. Open the Astronomy Observer panel, press the **cogwheel** button and use **Copy dashboard YAML** in the Dashboard preset section, or copy [`dashboard/astronomy-dashboard.yaml`](../dashboard/astronomy-dashboard.yaml) from the repository.
 
 Create a separate Home Assistant dashboard, open its raw configuration editor and paste the preset. The app deliberately does not write to Home Assistant's dashboard storage or `configuration.yaml`.
 
@@ -276,13 +304,13 @@ For more selective alerts, use `astronomy_observer_updated` and inspect the scor
 
 ## Manual refresh
 
-The Ingress page has a **Refresh now** button. It asks the running service to perform a new refresh immediately. Normal refreshes continue on the configured schedule.
+The circular-arrow icon in the top toolbar asks the running service to perform a new refresh immediately. The icon spins while the request is in progress. Normal refreshes continue on the configured schedule.
 
 Saving Observer Setup also triggers a refresh. The runtime reloads the persisted setup before every calculation, so changing the observer or simple horizon does not require restarting the app.
 
-## Observing notes
+## Observing notes and history
 
-The Ingress page includes a local observing log. During or after a session you can save any combination of:
+Observing Notes are hidden during normal use and opened from the notes icon in the top toolbar. During or after a session you can save any combination of:
 
 - measured SQM;
 - estimated or measured seeing in arcseconds;
@@ -290,13 +318,29 @@ The Ingress page includes a local observing log. During or after a session you c
 - naked-eye limiting magnitude;
 - a short free-text note.
 
-Each entry is saved with the current forecast component scores and location label. Exact coordinates are not written to the log. The newest 50 entries can be reviewed in the Ingress page; the full append-only file remains in the app's persistent `/data` directory.
+Each entry is saved with the current forecast component scores and location label. Exact coordinates are not written to the log.
 
-The log is intended to support local calibration over time. It does not automatically change the scoring model in this release.
+**Observation history is collapsed by default.** Expanding it exposes all retained entries returned by the local observations endpoint, together with client-side controls for:
+
+- free-text search across date, location, notes and displayed measurements;
+- filtering to entries that contain SQM, seeing, transparency, limiting magnitude or text notes;
+- limiting the view to the last 7, 30 or 90 days, or showing all available history.
+
+The full append-only file remains in the app's persistent `/data` directory. The log is intended to support local calibration over time. It does not automatically change the scoring model in this release.
+
+## Source status
+
+The Source status section uses a traffic-light dot before every source so degraded inputs are visible at a glance:
+
+- **green** — current or local source;
+- **amber** — cached, fallback, limited or intentionally disabled source;
+- **red** — unavailable, failed, unknown or missing source.
+
+The text beside the dot remains the authoritative description of which provider or cache was used. The colour is a quick operational summary, not a replacement for that text.
 
 ## Source failures
 
-The app does not invent missing observations. Weather has an independent provider fallback and a limited recent cache. Other changing sources have separate caches with age limits. The World Atlas lookup is bundled and local, so it does not depend on an external service at runtime. The source-status entity and Ingress page show which source was used.
+The app does not invent missing observations. Weather has an independent provider fallback and a limited recent cache. Other changing sources have separate caches with age limits. The World Atlas lookup is bundled and local, so it does not depend on an external service at runtime.
 
 If weather cannot be obtained from either provider and there is no recent cache, the refresh fails and the previous successful Home Assistant states remain in place. Check the app log and `sensor.astronomy_observer_last_update` before relying on an old result.
 
