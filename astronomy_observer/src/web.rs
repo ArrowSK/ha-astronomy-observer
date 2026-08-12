@@ -365,7 +365,8 @@ pub fn serve(
                         let _ = request.respond(json_response(json!(people), 200));
                     }
                     Err(error) => {
-                        let _ = request.respond(json_response(json!({"error": error.to_string()}), 502));
+                        let _ = request
+                            .respond(json_response(json!({"error": error.to_string()}), 502));
                     }
                 },
                 (Method::Get, "/api/settings") => {
@@ -381,7 +382,8 @@ pub fn serve(
                             ));
                         }
                         Err(error) => {
-                            let _ = request.respond(json_response(json!({"error": error.to_string()}), 500));
+                            let _ = request
+                                .respond(json_response(json!({"error": error.to_string()}), 500));
                         }
                     }
                 }

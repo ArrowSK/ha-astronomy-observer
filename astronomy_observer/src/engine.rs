@@ -178,17 +178,29 @@ fn adjust_candidate(mut recommendation: Recommendation) -> Option<Recommendation
                 || upper_name.contains("LANDSAT")
                 || upper_name.contains("NOAA")
             {
-                (0.65, 72.0, "binoculars; naked-eye brightness uncertain".to_string())
+                (
+                    0.65,
+                    72.0,
+                    "binoculars; naked-eye brightness uncertain".to_string(),
+                )
             } else if upper_name.contains("R/B") || upper_name.contains("DEB") {
-                (0.42, 58.0, "binoculars; brightness can vary strongly".to_string())
+                (
+                    0.42,
+                    58.0,
+                    "binoculars; brightness can vary strongly".to_string(),
+                )
             } else {
-                (0.55, 65.0, "binoculars; brightness not modelled".to_string())
+                (
+                    0.55,
+                    65.0,
+                    "binoculars; brightness not modelled".to_string(),
+                )
             };
             recommendation.score = (recommendation.score * factor).min(ceiling);
             recommendation.equipment = equipment;
-            recommendation.note.push_str(
-                "; brightness is not predicted, so the pass is deliberately de-weighted",
-            );
+            recommendation
+                .note
+                .push_str("; brightness is not predicted, so the pass is deliberately de-weighted");
         }
         "comet" => {
             let factor = match recommendation.magnitude {
@@ -453,6 +465,8 @@ mod tests {
             1
         );
         assert!(!selected.iter().any(|value| value.name.starts_with("A/")));
-        assert!(selected.first().is_some_and(|value| value.name != "SL-14 R/B"));
+        assert!(selected
+            .first()
+            .is_some_and(|value| value.name != "SL-14 R/B"));
     }
 }

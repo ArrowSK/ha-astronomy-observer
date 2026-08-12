@@ -57,7 +57,10 @@ impl HaClient {
                 .and_then(Value::as_str)
                 .unwrap_or(entity_id);
             let has_location = attributes.get("latitude").and_then(Value::as_f64).is_some()
-                && attributes.get("longitude").and_then(Value::as_f64).is_some();
+                && attributes
+                    .get("longitude")
+                    .and_then(Value::as_f64)
+                    .is_some();
             people.push(json!({
                 "entity_id": entity_id,
                 "name": name,
