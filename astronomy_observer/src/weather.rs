@@ -8,6 +8,9 @@ use std::path::Path;
 use std::time::Duration;
 use ureq::Agent;
 
+type AirQualitySample = (Option<f64>, Option<f64>, Option<f64>);
+type AirQualityByTime = HashMap<i64, AirQualitySample>;
+
 const USER_AGENT: &str =
     "AstronomyObserver/0.1 (+https://github.com/ArrowSK/ha-astronomy-observer)";
 
