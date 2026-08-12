@@ -73,8 +73,8 @@ def validate_manifest() -> None:
         fail("expected aarch64 and amd64 architectures")
     if not config.get("homeassistant_api") or not config.get("ingress"):
         fail("Home Assistant API and Ingress must be enabled")
-    if "apparmor" in config:
-        fail("custom AppArmor profile must not replace the Supervisor default")
+    if config.get("apparmor") is False:
+        fail("AppArmor must remain enabled")
     if config.get("panel_admin") is not True:
         fail("Ingress panel must remain admin-only")
     if not str(config.get("watchdog", "")).startswith("tcp://"):
