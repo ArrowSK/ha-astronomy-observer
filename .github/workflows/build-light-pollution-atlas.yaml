@@ -57,7 +57,7 @@ jobs:
 
       - name: Commit generated atlas when changed
         run: |
-          if git diff --quiet -- astronomy_observer/data/world_atlas_3min.bin astronomy_observer/data/world_atlas_3min.json; then
+          if [ -z "$(git status --porcelain -- astronomy_observer/data/world_atlas_3min.bin astronomy_observer/data/world_atlas_3min.json)" ]; then
             echo "Bundled atlas is already current."
             exit 0
           fi
