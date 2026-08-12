@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a reproducible problem with Astronomy Observer
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove exact home/person coordinates, access tokens and other private information before posting logs.
+  - type: input
+    id: version
+    attributes:
+      label: Astronomy Observer version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version and hardware
+      placeholder: Home Assistant 2026.x on Raspberry Pi 4
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact coordinates, tokens and private data.
+      render: text

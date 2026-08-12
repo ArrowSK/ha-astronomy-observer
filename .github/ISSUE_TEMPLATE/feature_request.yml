@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a change to observing calculations, data or interface
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Observing use case
+      description: Describe the observing decision this would improve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Data source or scientific basis
+      description: For scoring/data changes, include a reference or explain how the value can be validated.

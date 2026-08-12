@@ -1,0 +1,52 @@
+configuration:
+  primary_person:
+    name: Person to follow
+    description: Home Assistant person entity, for example person.alex. Leave blank to use Home Assistant's home coordinates.
+  refresh_minutes:
+    name: Refresh interval
+    description: Minutes between normal refreshes. The person's location is checked on every refresh.
+  forecast_days:
+    name: Forecast days
+    description: Number of nights to include in the outlook.
+  observing_window_hours:
+    name: Target search window
+    description: Hours ahead used for tonight's target ranking.
+  minimum_target_altitude:
+    name: Minimum target altitude
+    description: Targets below this altitude are excluded. The horizon mask can impose a higher limit by azimuth.
+  good_observing_threshold:
+    name: Good-observing threshold
+    description: Overall score at or above which the good-observing binary sensor is on.
+  telescope_aperture_mm:
+    name: Telescope aperture
+    description: Clear aperture in millimetres. Set to 0 if telescope targets should not be considered.
+  binocular_aperture_mm:
+    name: Binocular aperture
+    description: Objective diameter in millimetres. Set to 0 if binocular targets should not be considered.
+  horizon_mask:
+    name: Horizon mask
+    description: Comma-separated azimuth:altitude points in degrees. Values are interpolated around the full horizon.
+  sqm_override:
+    name: Fixed SQM value
+    description: Moonless zenith sky brightness in mag/arcsec². Set to 0 to use the configured SQM sensor or imported light-pollution grid.
+  sqm_entity:
+    name: SQM sensor entity
+    description: Optional Home Assistant sensor containing sky brightness in mag/arcsec². A fixed SQM value takes priority when both are configured.
+  light_pollution_file:
+    name: Light-pollution grid file
+    description: CSV file in the app configuration folder containing latitude, longitude and artificial zenith radiance in mcd/m².
+  nearby_dark_site_radius_km:
+    name: Dark-site search radius
+    description: Maximum straight-line radius used to find a darker point in an imported light-pollution grid. Set to 0 to disable.
+  enable_satellites:
+    name: Visible satellites
+    description: Include bright satellite passes using current CelesTrak orbital elements.
+  enable_aurora:
+    name: Aurora forecast
+    description: Include NOAA OVATION aurora probability when the product is available.
+  enable_comets:
+    name: Comets
+    description: Include potentially observable comets from current Minor Planet Center orbital elements.
+  external_location_precision:
+    name: External coordinate precision
+    description: Decimal places used when coordinates are sent to weather services. Local astronomy calculations keep the full Home Assistant location.

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Astronomy Observer</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel: #121927;
+      --panel2: #172033;
+      --text: #eef3ff;
+      --muted: #9eabc1;
+      --line: #28344a;
+      --good: #83d39b;
+      --warn: #f0c36a;
+      --bad: #e77b7b;
+      --accent: #9ec5ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #111b32 0, var(--bg) 34rem);
+      color: var(--text);
+      font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(1120px, 100%); margin: 0 auto; padding: 22px 18px 42px; }
+    header { display: flex; gap: 18px; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+    h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: .01em; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    p { margin: 0; }
+    .muted { color: var(--muted); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    button {
+      appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+      border-radius: 9px; padding: 8px 11px; cursor: pointer; font: inherit;
+    }
+    button:hover { border-color: #4d607f; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
+    .card { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 13px; padding: 15px; }
+    .hero { grid-column: span 4; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; }
+    .conditions { grid-column: span 8; }
+    .targets { grid-column: span 8; }
+    .outlook { grid-column: span 4; }
+    .sources { grid-column: 1 / -1; }
+    .notes { grid-column: 1 / -1; }
+    .score { font-size: 58px; line-height: 1; font-weight: 650; letter-spacing: -.04em; }
+    .score small { font-size: 20px; color: var(--muted); font-weight: 500; }
+    .grade { font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .09em; }
+    .good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .metric { background: var(--panel2); border-radius: 9px; padding: 10px; min-height: 72px; }
+    .metric .v { font-size: 21px; font-variant-numeric: tabular-nums; }
+    .metric .k { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .target { display: grid; grid-template-columns: 30px minmax(0, 1fr) 58px; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+    .target:first-of-type { border-top: 0; padding-top: 0; }
+    .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .target-name { font-weight: 620; }
+    .target-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .target-score { text-align: right; font-size: 19px; font-variant-numeric: tabular-nums; }
+    .night { display: grid; grid-template-columns: 1fr 48px; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); }
+    .night:first-of-type { border-top: 0; }
+    .night-score { text-align: right; font-variant-numeric: tabular-nums; }
+    .source-row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 6px 0; }
+    .source-row span:first-child { color: var(--muted); }
+    .status { margin: 32px auto; max-width: 520px; text-align: center; color: var(--muted); }
+    .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; margin-right: 6px; color: var(--muted); font-size: 12px; }
+    .foot { margin-top: 14px; color: var(--muted); font-size: 12px; }
+    .note-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .note-form label { color: var(--muted); font-size: 12px; }
+    .note-form input, .note-form textarea { width: 100%; margin-top: 4px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 8px; padding: 8px; font: inherit; }
+    .note-form .wide { grid-column: 1 / -1; }
+    .note-form textarea { min-height: 72px; resize: vertical; }
+    .note-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .saved-note { padding: 9px 0; border-top: 1px solid var(--line); }
+    .saved-note:first-child { border-top: 0; }
+    @media (max-width: 760px) {
+      header { display: block; }
+      .toolbar { justify-content: flex-start; margin-top: 12px; }
+      .hero, .conditions, .targets, .outlook { grid-column: 1 / -1; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .note-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .source-row { grid-template-columns: 1fr; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Astronomy Observer</h1>
+      <p class="muted" id="where">Waiting for the first calculation…</p>
+    </div>
+    <div class="toolbar">
+      <button id="refresh">Refresh now</button>
+      <button id="dashboard">Copy dashboard YAML</button>
+    </div>
+  </header>
+
+  <div id="loading" class="status">The first calculation normally takes a little longer while current source data are collected.</div>
+  <div id="content" class="grid" hidden>
+    <section class="card hero">
+      <div>
+        <div class="muted">Best two-hour observing window</div>
+        <div id="window" style="font-size:20px;margin-top:3px">—</div>
+      </div>
+      <div>
+        <div class="score"><span id="overall">—</span><small>/100</small></div>
+        <div id="grade" class="grade">—</div>
+      </div>
+      <div class="muted" id="confidence">—</div>
+    </section>
+
+    <section class="card conditions">
+      <h2>Conditions in the best window</h2>
+      <div class="metrics" id="metrics"></div>
+      <div class="foot" id="raw"></div>
+    </section>
+
+    <section class="card targets">
+      <h2>Best targets tonight</h2>
+      <div id="target-list"></div>
+    </section>
+
+    <section class="card outlook">
+      <h2>Next seven nights</h2>
+      <div id="night-list"></div>
+    </section>
+
+    <section class="card notes">
+      <h2>Observing notes</h2>
+      <p class="muted" style="margin-bottom:12px">Save what the sky actually looked like. Entries stay in this app's local data and can be compared with the forecast later.</p>
+      <div class="note-form">
+        <label>SQM (mag/arcsec²)<input id="note-sqm" inputmode="decimal" type="number" min="10" max="25" step="0.01" placeholder="20.70"></label>
+        <label>Seeing (arcsec)<input id="note-seeing" inputmode="decimal" type="number" min="0.1" max="20" step="0.1" placeholder="1.8"></label>
+        <label>Transparency (1–5)<input id="note-transparency" inputmode="numeric" type="number" min="1" max="5" step="1" placeholder="4"></label>
+        <label>Limiting magnitude<input id="note-limiting" inputmode="decimal" type="number" min="-2" max="9" step="0.1" placeholder="5.9"></label>
+        <label class="wide">Notes<textarea id="note-text" maxlength="1000" placeholder="Thin haze low in the west after midnight."></textarea></label>
+      </div>
+      <div class="note-actions"><button id="save-note">Save observation</button><span class="muted" id="note-status"></span></div>
+      <div id="observation-list" style="margin-top:14px"></div>
+    </section>
+
+    <section class="card sources">
+      <h2>Source status</h2>
+      <div id="source-list"></div>
+      <div class="foot">A source may be cached when the live service is unavailable. Unknown values stay unknown and reduce the confidence score.</div>
+    </section>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const n = (v, d = 0, suffix = '') => v === null || v === undefined ? '—' : `${Number(v).toFixed(d)}${suffix}`;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const localTime = value => value ? new Date(value).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
+const grade = score => score >= 80 ? ['Excellent','good'] : score >= 70 ? ['Very good','good'] : score >= 55 ? ['Usable','warn'] : score >= 35 ? ['Poor','warn'] : ['Very poor','bad'];
+
+function metric(label, value) {
+  return `<div class="metric"><div class="v">${esc(value)}</div><div class="k">${esc(label)}</div></div>`;
+}
+
+function render(snapshot) {
+  if (!snapshot) return;
+  $('loading').hidden = true;
+  $('content').hidden = false;
+  $('where').textContent = `${snapshot.location.label} · ${snapshot.weather_source}${snapshot.weather_stale ? ' · cached weather' : ''} · updated ${localTime(snapshot.generated_at)}`;
+  $('overall').textContent = Math.round(snapshot.conditions.overall);
+  const [label, cls] = grade(snapshot.conditions.overall);
+  $('grade').textContent = label;
+  $('grade').className = `grade ${cls}`;
+  $('confidence').textContent = `Data confidence ${Math.round(snapshot.conditions.confidence)}/100`;
+  $('window').textContent = snapshot.best_window_start ? `${localTime(snapshot.best_window_start)}–${localTime(snapshot.best_window_end)}` : 'No dark two-hour window found';
+
+  const c = snapshot.conditions;
+  const w = snapshot.best_window_context || {};
+  $('metrics').innerHTML = [
+    metric('Deep sky', n(c.deep_sky, 0, '/100')),
+    metric('Planetary', n(c.planetary, 0, '/100')),
+    metric('Imaging', n(c.imaging, 0, '/100')),
+    metric('Clear-sky factor', n(c.cloud, 0, '/100')),
+    metric('Transparency', n(c.transparency, 0, '/100')),
+    metric('Seeing estimate', n(c.seeing_estimate, 0, '/100')),
+    metric('Darkness', n(c.darkness, 0, '/100')),
+    metric('Moon interference', n(c.moon_interference, 0, '/100')),
+    metric('Cloud cover', n(w.cloud_total_pct, 0, '%')),
+    metric('Visibility', n(w.visibility_km, 1, ' km')),
+    metric('AOD 550 nm', n(w.aerosol_optical_depth, 3)),
+    metric('Dew margin', n(c.dew_margin_c, 1, ' °C')),
+  ].join('');
+  $('raw').innerHTML = [
+    `<span class="pill">Low cloud ${n(w.cloud_low_pct,0,'%')}</span>`,
+    `<span class="pill">Mid cloud ${n(w.cloud_mid_pct,0,'%')}</span>`,
+    `<span class="pill">High cloud ${n(w.cloud_high_pct,0,'%')}</span>`,
+    `<span class="pill">Wind ${n(w.wind_speed_kmh,1,' km/h')}</span>`,
+    `<span class="pill">200 hPa wind ${n(w.wind_200hpa_kmh,0,' km/h')}</span>`,
+    `<span class="pill">Moon ${n(w.moon_illumination_pct,0,'%')}</span>`,
+    `<span class="pill">SQM ${n(snapshot.sky_brightness.sqm_mag_arcsec2,2)}</span>`,
+  ].join('');
+
+  $('target-list').innerHTML = snapshot.recommendations.length ? snapshot.recommendations.map((r, i) => `
+    <div class="target">
+      <div class="rank">${i + 1}</div>
+      <div>
+        <div class="target-name">${esc(r.name)}</div>
+        <div class="target-meta">${esc(r.category)} · ${localTime(r.best_time)} · alt ${n(r.altitude_deg,0,'°')} · az ${n(r.azimuth_deg,0,'°')} · ${esc(r.equipment)}</div>
+        <div class="target-meta">${esc(r.note)}${r.moon_separation_deg == null ? '' : ` · Moon ${n(r.moon_separation_deg,0,'°')} away`}</div>
+      </div>
+      <div class="target-score">${Math.round(r.score)}</div>
+    </div>`).join('') : '<div class="muted">No suitable targets found in the configured window.</div>';
+
+  $('night-list').innerHTML = snapshot.outlook.length ? snapshot.outlook.map(r => `
+    <div class="night"><div><strong>${esc(r.date)}</strong><div class="muted">best ${localTime(r.best_time)}</div></div><div class="night-score">${Math.round(r.score)}</div></div>`).join('') : '<div class="muted">No night outlook is available.</div>';
+
+  const sources = snapshot.source_status || {};
+  $('source-list').innerHTML = Object.keys(sources).sort().map(key => `<div class="source-row"><span>${esc(key.replaceAll('_',' '))}</span><span>${esc(sources[key])}</span></div>`).join('');
+}
+
+function optionalNumber(id) {
+  const value = $(id).value.trim();
+  return value === '' ? null : Number(value);
+}
+
+async function loadObservations() {
+  try {
+    const response = await fetch('api/observations', {cache:'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const rows = await response.json();
+    $('observation-list').innerHTML = rows.length ? rows.slice(0, 8).map(row => {
+      const details = [
+        row.sqm == null ? null : `SQM ${n(row.sqm,2)}`,
+        row.seeing_arcsec == null ? null : `seeing ${n(row.seeing_arcsec,1,'″')}`,
+        row.transparency == null ? null : `transparency ${row.transparency}/5`,
+        row.limiting_magnitude == null ? null : `NELM ${n(row.limiting_magnitude,1)}`,
+        row.forecast_score == null ? null : `forecast ${n(row.forecast_score,0,'/100')}`,
+      ].filter(Boolean).join(' · ');
+      return `<div class="saved-note"><div><strong>${esc(new Date(row.recorded_at).toLocaleString())}</strong> · ${esc(row.location)}</div><div class="target-meta">${esc(details || 'field note')}</div>${row.notes ? `<div style="margin-top:3px">${esc(row.notes)}</div>` : ''}</div>`;
+    }).join('') : '<div class="muted">No observing notes saved yet.</div>';
+  } catch (error) {
+    $('observation-list').innerHTML = `<div class="muted">Unable to read observing notes: ${esc(error.message)}</div>`;
+  }
+}
+
+async function load() {
+  try {
+    const response = await fetch('api/snapshot', {cache:'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    render(await response.json());
+  } catch (error) {
+    $('loading').textContent = `Unable to read the current result: ${error.message}`;
+  }
+}
+
+$('refresh').addEventListener('click', async () => {
+  $('refresh').disabled = true;
+  $('refresh').textContent = 'Refreshing…';
+  try { await fetch('api/refresh', {method:'POST'}); } finally {
+    setTimeout(() => { $('refresh').disabled = false; $('refresh').textContent = 'Refresh now'; load(); }, 1800);
+  }
+});
+
+$('dashboard').addEventListener('click', async () => {
+  const response = await fetch('api/dashboard', {cache:'no-store'});
+  const text = await response.text();
+  await navigator.clipboard.writeText(text);
+  const old = $('dashboard').textContent;
+  $('dashboard').textContent = 'Copied';
+  setTimeout(() => $('dashboard').textContent = old, 1500);
+});
+
+$('save-note').addEventListener('click', async () => {
+  const payload = {
+    sqm: optionalNumber('note-sqm'),
+    seeing_arcsec: optionalNumber('note-seeing'),
+    transparency: optionalNumber('note-transparency'),
+    limiting_magnitude: optionalNumber('note-limiting'),
+    notes: $('note-text').value.trim(),
+  };
+  $('save-note').disabled = true;
+  $('note-status').textContent = 'Saving…';
+  try {
+    const response = await fetch('api/observation', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    $('note-status').textContent = 'Saved locally';
+    $('note-sqm').value = ''; $('note-seeing').value = ''; $('note-transparency').value = ''; $('note-limiting').value = ''; $('note-text').value = '';
+    await loadObservations();
+  } catch (error) {
+    $('note-status').textContent = error.message;
+  } finally {
+    $('save-note').disabled = false;
+  }
+});
+
+load();
+loadObservations();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

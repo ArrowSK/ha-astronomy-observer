@@ -1,0 +1,41 @@
+#include <tunables/global>
+
+profile astronomy_observer flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  file,
+  network inet,
+  network inet6,
+  signal (send) set=(kill,term,int,hup,cont),
+
+  # S6 Overlay and the bashio launcher supplied by the Home Assistant base image.
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
+  /usr/lib/bashio/** ix,
+  /tmp/** rwk,
+
+  # Astronomy Observer runtime and bundled data.
+  /usr/local/bin/astronomy-observer rix,
+  /usr/local/bin/astro-helper rix,
+  /usr/share/astronomy-observer/** r,
+
+  # Persistent app data and user-supplied read-only configuration files.
+  /data/** rwk,
+  /config/** r,
+
+  # Runtime resolver, certificates and timezone files.
+  /etc/hosts r,
+  /etc/resolv.conf r,
+  /etc/nsswitch.conf r,
+  /etc/ssl/** r,
+  /usr/share/zoneinfo/** r,
+}

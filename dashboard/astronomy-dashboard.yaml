@@ -1,0 +1,116 @@
+title: Astronomy
+views:
+  - title: Tonight
+    path: tonight
+    icon: mdi:telescope
+    cards:
+      - type: gauge
+        entity: sensor.astronomy_observer_score
+        name: Observing conditions
+        min: 0
+        max: 100
+        needle: true
+        severity:
+          red: 0
+          yellow: 45
+          green: 70
+
+      - type: entities
+        title: Best window
+        show_header_toggle: false
+        entities:
+          - entity: sensor.astronomy_observer_best_window
+            name: Time
+          - entity: sensor.astronomy_observer_deep_sky
+            name: Deep sky
+          - entity: sensor.astronomy_observer_planetary
+            name: Planetary
+          - entity: sensor.astronomy_observer_imaging
+            name: Imaging
+          - entity: sensor.astronomy_observer_confidence
+            name: Data confidence
+
+      - type: entities
+        title: Sky and atmosphere
+        show_header_toggle: false
+        entities:
+          - entity: sensor.astronomy_observer_cloud_cover
+            name: Total cloud
+          - entity: sensor.astronomy_observer_cloud_layers
+            name: High cloud
+          - entity: sensor.astronomy_observer_transparency
+            name: Transparency
+          - entity: sensor.astronomy_observer_seeing
+            name: Estimated seeing
+          - entity: sensor.astronomy_observer_visibility
+            name: Visibility
+          - entity: sensor.astronomy_observer_aod
+            name: Aerosol optical depth
+          - entity: sensor.astronomy_observer_wind
+            name: Surface wind
+          - entity: sensor.astronomy_observer_jet_stream
+            name: 200 hPa wind
+          - entity: sensor.astronomy_observer_dew_margin
+            name: Dew margin
+
+      - type: entities
+        title: Darkness and Moon
+        show_header_toggle: false
+        entities:
+          - entity: sensor.astronomy_observer_darkness
+            name: Darkness score
+          - entity: sensor.astronomy_observer_sky_brightness
+            name: Sky brightness
+          - entity: sensor.astronomy_observer_moon_illumination
+            name: Moon illumination
+          - entity: sensor.astronomy_observer_moon_altitude
+            name: Moon altitude
+          - entity: sensor.astronomy_observer_moon_interference
+            name: Moon interference
+          - entity: sensor.astronomy_observer_sun_altitude
+            name: Sun altitude
+
+      - type: entities
+        title: Top 10 tonight
+        show_header_toggle: false
+        entities:
+          - entity: sensor.astronomy_observer_target_1
+          - entity: sensor.astronomy_observer_target_2
+          - entity: sensor.astronomy_observer_target_3
+          - entity: sensor.astronomy_observer_target_4
+          - entity: sensor.astronomy_observer_target_5
+          - entity: sensor.astronomy_observer_target_6
+          - entity: sensor.astronomy_observer_target_7
+          - entity: sensor.astronomy_observer_target_8
+          - entity: sensor.astronomy_observer_target_9
+          - entity: sensor.astronomy_observer_target_10
+
+      - type: entities
+        title: Changing events
+        show_header_toggle: false
+        entities:
+          - entity: sensor.astronomy_observer_meteor_shower
+            name: Meteor shower
+          - entity: sensor.astronomy_observer_comet
+            name: Comet
+          - entity: sensor.astronomy_observer_satellite_pass
+            name: Satellite pass
+          - entity: sensor.astronomy_observer_aurora
+            name: Aurora
+
+      - type: entities
+        title: Planning and source status
+        show_header_toggle: false
+        entities:
+          - entity: sensor.astronomy_observer_next_good_night
+            name: Next good night
+          - entity: sensor.astronomy_observer_nearby_dark_site
+            name: Nearby darker point
+          - entity: sensor.astronomy_observer_weather_source
+            name: Weather source
+          - entity: sensor.astronomy_observer_source_status
+            name: Source status
+          - entity: sensor.astronomy_observer_last_update
+            name: Last update
+          - entity: binary_sensor.astronomy_observer_good_observing
+            name: Good observing now
