@@ -34,15 +34,6 @@ jobs:
       - name: Select Rust 1.89
         run: rustup default 1.89.0
 
-      - name: Generate dependency lock file
-        run: cargo generate-lockfile --manifest-path astronomy_observer/Cargo.toml
-
-      - name: Upload dependency lock file
-        uses: actions/upload-artifact@v4
-        with:
-          name: cargo-lock
-          path: astronomy_observer/Cargo.lock
-
       - name: Check Rust formatting
         id: rustfmt
         run: |
@@ -62,13 +53,13 @@ jobs:
           path: rustfmt.patch
 
       - name: Run Clippy
-        run: cargo clippy --manifest-path astronomy_observer/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --locked --manifest-path astronomy_observer/Cargo.toml --all-targets -- -D warnings
 
       - name: Run Rust tests
-        run: cargo test --manifest-path astronomy_observer/Cargo.toml
+        run: cargo test --locked --manifest-path astronomy_observer/Cargo.toml
 
       - name: Build release runtime
-        run: cargo build --manifest-path astronomy_observer/Cargo.toml --release
+        run: cargo build --locked --manifest-path astronomy_observer/Cargo.toml --release
 
       - name: Run runtime self-test
         run: astronomy_observer/target/release/astronomy-observer --self-test
