@@ -1,2 +1,4 @@
 [build]
 builder = "DOCKERFILE"
+dockerfilePath = "webapp/Dockerfile"
+watchPatterns = ["astronomy_observer/**", "webapp/**", "railway.toml"]
