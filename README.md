@@ -31,7 +31,7 @@ The runtime is a small Rust service with a C astronomy helper. It is designed fo
 - Automatic location-based light-pollution estimate from the bundled World Atlas derivative, with the Falchi/GFZ reference visible in the interface.
 - Fixed SQM, Home Assistant SQM sensor and higher-resolution local CSV overrides for observers with better local data.
 - Nearby darker-area search from the built-in atlas without manual setup.
-- Collapsible local observing history with search, metric filters and time filters.
+- Collapsible local observing history with search, metric/time filters, individual deletion and list-level multi-selection deletion.
 - Source-status indicators with green, amber and red states for current/local, cached/fallback and unavailable sources.
 - Home Assistant entities for dashboards and automations.
 - Built-in Ingress view and a dependency-free native dashboard preset.
@@ -44,7 +44,7 @@ In Home Assistant, add this repository to the app store:
 
 Install **Astronomy Observer** and start it. The default configuration uses Home Assistant's Home coordinates. After the first successful refresh, open Astronomy Observer and open the hamburger menu, choose **Setup**, and select a Home Assistant person and the lowest useful altitude for the observing site. Saving closes Setup automatically and triggers a recalculation.
 
-The header keeps manual refresh directly accessible and places **Setup** and the **Observation journal** in a spaced hamburger menu. The journal uses a document icon rather than an edit/pencil symbol. A persistent bottom navigation bar jumps between Tonight, Conditions, Targets, Outlook and Sources, with the current section highlighted while scrolling. The dashboard YAML copy action remains inside Setup because it is normally only needed when creating the optional native dashboard.
+The header keeps manual refresh directly accessible and places **Setup** and the **Observation journal** in a spaced hamburger menu. The journal uses a document icon rather than an edit/pencil symbol. A persistent bottom navigation bar jumps between Tonight, Conditions, Targets, Forecast and Sources, with the current section highlighted while scrolling. Observation entries can be deleted individually or selected in the history list and deleted together after confirmation. The dashboard YAML copy action remains inside Setup because it is normally only needed when creating the optional native dashboard.
 
 No light-pollution file is required. Astronomy Observer looks up the selected location in its bundled approximately 3-arcminute World Atlas grid and uses the resulting sky-brightness estimate in the initial overall, deep-sky and imaging scores. A real SQM sensor, a fixed SQM value or a higher-resolution local grid can still override that estimate.
 
