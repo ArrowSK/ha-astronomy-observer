@@ -131,12 +131,23 @@
     .note-form .wide { grid-column: 1 / -1; }
     .note-form textarea { min-height: 72px; resize: vertical; }
     .note-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    .saved-note { padding: 9px 0; border-top: 1px solid var(--line); }
+    .saved-note { display: grid; grid-template-columns: 28px minmax(0, 1fr) 44px; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
     .saved-note:first-child { border-top: 0; }
+    .saved-note-main { min-width: 0; }
+    .observation-select { display: grid; place-items: center; min-height: 42px; }
+    .observation-select input, .history-bulk input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+    .observation-delete { width: 42px; height: 42px; padding: 0; display: grid; place-items: center; color: var(--bad); background: transparent; }
+    .observation-delete:hover { border-color: var(--bad); background: rgba(231,123,123,.07); }
+    .observation-delete svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .history-panel { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
     .history-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; color: var(--text); font-weight: 620; }
     .history-count { color: var(--muted); font-size: 12px; font-weight: 500; }
     .history-controls { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+    .history-bulk { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 48px; margin: 8px 0 2px; }
+    .history-bulk label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--muted); cursor: pointer; }
+    .history-bulk .delete-selected { min-height: 44px; color: var(--bad); }
+    .history-bulk .delete-selected:not(:disabled):hover { border-color: var(--bad); background: rgba(231,123,123,.07); }
+    .history-bulk .delete-selected:disabled { opacity: .45; cursor: default; }
 
     .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .setup-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel2); }
@@ -279,6 +290,11 @@
           <option value="90">Last 90 days</option>
         </select>
       </div>
+      <div class="history-bulk">
+        <label><input id="history-select-visible" type="checkbox"> Select visible</label>
+        <button id="delete-selected" class="delete-selected" type="button" disabled>Delete selected</button>
+        <span id="delete-status" class="muted" aria-live="polite"></span>
+      </div>
       <div id="observation-list" style="margin-top:8px"></div>
     </details>
   </section>
@@ -328,7 +344,7 @@
   <a href="#overview" data-nav="overview" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg><span>Tonight</span></a>
   <a href="#conditions" data-nav="conditions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M8 12h8M10 17h4"/><circle cx="7" cy="7" r="1"/><circle cx="17" cy="12" r="1"/><circle cx="9" cy="17" r="1"/></svg><span>Conditions</span></a>
   <a href="#targets" data-nav="targets"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>Targets</span></a>
-  <a href="#outlook" data-nav="outlook"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Outlook</span></a>
+  <a href="#outlook" data-nav="outlook"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Forecast</span></a>
   <a href="#sources" data-nav="sources"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg><span>Sources</span></a>
 </nav>
 <script>
@@ -340,6 +356,8 @@ const grade = score => score >= 80 ? ['Excellent','good'] : score >= 70 ? ['Very
 let setupLoaded = false;
 let notesLoaded = false;
 let observationRows = [];
+let selectedObservationTimes = new Set();
+let visibleObservationTimes = [];
 let currentSnapshot = null;
 
 const conditionHelp = {
@@ -546,12 +564,12 @@ function observationMatchesFilter(row, filter) {
   return true;
 }
 
-function renderObservationHistory() {
+function filteredObservationRows() {
   const query = $('history-search').value.trim().toLowerCase();
   const filter = $('history-filter').value;
   const period = $('history-period').value;
   const now = Date.now();
-  const rows = observationRows.filter(row => {
+  return observationRows.filter(row => {
     if (!observationMatchesFilter(row, filter)) return false;
     if (period !== 'all') {
       const recorded = new Date(row.recorded_at).getTime();
@@ -565,6 +583,25 @@ function renderObservationHistory() {
     ].filter(value => value != null).join(' ').toLowerCase();
     return searchable.includes(query);
   });
+}
+
+function updateHistorySelectionControls() {
+  const selectedVisible = visibleObservationTimes.filter(value => selectedObservationTimes.has(value)).length;
+  const selectVisible = $('history-select-visible');
+  selectVisible.checked = visibleObservationTimes.length > 0 && selectedVisible === visibleObservationTimes.length;
+  selectVisible.indeterminate = selectedVisible > 0 && selectedVisible < visibleObservationTimes.length;
+  selectVisible.disabled = visibleObservationTimes.length === 0;
+  $('delete-selected').disabled = selectedObservationTimes.size === 0;
+  $('delete-selected').textContent = selectedObservationTimes.size
+    ? `Delete selected (${selectedObservationTimes.size})`
+    : 'Delete selected';
+}
+
+function renderObservationHistory() {
+  const rows = filteredObservationRows();
+  visibleObservationTimes = rows.map(row => row.recorded_at);
+  const available = new Set(observationRows.map(row => row.recorded_at));
+  selectedObservationTimes = new Set([...selectedObservationTimes].filter(value => available.has(value)));
   $('history-count').textContent = rows.length === observationRows.length ? `${rows.length} entries` : `${rows.length} of ${observationRows.length}`;
   $('observation-list').innerHTML = rows.length ? rows.map(row => {
     const details = [
@@ -574,8 +611,36 @@ function renderObservationHistory() {
       row.limiting_magnitude == null ? null : `NELM ${n(row.limiting_magnitude,1)}`,
       row.forecast_score == null ? null : `forecast ${n(row.forecast_score,0,'/100')}`,
     ].filter(Boolean).join(' · ');
-    return `<div class="saved-note"><div><strong>${esc(new Date(row.recorded_at).toLocaleString())}</strong> · ${esc(row.location)}</div><div class="target-meta">${esc(details || 'field note')}</div>${row.notes ? `<div style="margin-top:3px">${esc(row.notes)}</div>` : ''}</div>`;
+    const recordedLabel = new Date(row.recorded_at).toLocaleString();
+    const selected = selectedObservationTimes.has(row.recorded_at) ? ' checked' : '';
+    return `<div class="saved-note">
+      <label class="observation-select"><input type="checkbox" data-select-observation="${esc(row.recorded_at)}" aria-label="Select observation from ${esc(recordedLabel)}"${selected}></label>
+      <div class="saved-note-main"><div><strong>${esc(recordedLabel)}</strong> · ${esc(row.location)}</div><div class="target-meta">${esc(details || 'field note')}</div>${row.notes ? `<div style="margin-top:3px">${esc(row.notes)}</div>` : ''}</div>
+      <button class="observation-delete" type="button" data-delete-observation="${esc(row.recorded_at)}" aria-label="Delete observation from ${esc(recordedLabel)}" title="Delete observation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg></button>
+    </div>`;
   }).join('') : '<div class="muted" style="padding:10px 0">No observations match the current search and filters.</div>';
+  updateHistorySelectionControls();
+}
+
+async function deleteObservations(recordedAt) {
+  $('delete-status').textContent = 'Deleting…';
+  $('delete-selected').disabled = true;
+  try {
+    const response = await fetch('api/observations', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({recorded_at: recordedAt})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    recordedAt.forEach(value => selectedObservationTimes.delete(value));
+    await loadObservations();
+    $('delete-status').textContent = `${result.deleted ?? 0} deleted`;
+    setTimeout(() => { if ($('delete-status').textContent.endsWith('deleted')) $('delete-status').textContent = ''; }, 1800);
+  } catch (error) {
+    $('delete-status').textContent = `Unable to delete: ${error.message}`;
+    updateHistorySelectionControls();
+  }
 }
 
 async function loadObservations() {
@@ -725,6 +790,38 @@ $('save-note').addEventListener('click', async () => {
 
 ['history-search', 'history-filter', 'history-period'].forEach(id => {
   $(id).addEventListener(id === 'history-search' ? 'input' : 'change', renderObservationHistory);
+});
+
+$('history-select-visible').addEventListener('change', event => {
+  visibleObservationTimes.forEach(value => {
+    if (event.target.checked) selectedObservationTimes.add(value);
+    else selectedObservationTimes.delete(value);
+  });
+  renderObservationHistory();
+});
+
+$('delete-selected').addEventListener('click', async () => {
+  const values = [...selectedObservationTimes];
+  if (!values.length) return;
+  if (!window.confirm(`Delete ${values.length} selected observation${values.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+  await deleteObservations(values);
+});
+
+$('observation-list').addEventListener('change', event => {
+  const checkbox = event.target.closest('[data-select-observation]');
+  if (!checkbox) return;
+  if (checkbox.checked) selectedObservationTimes.add(checkbox.dataset.selectObservation);
+  else selectedObservationTimes.delete(checkbox.dataset.selectObservation);
+  updateHistorySelectionControls();
+});
+
+$('observation-list').addEventListener('click', async event => {
+  const button = event.target.closest('[data-delete-observation]');
+  if (!button) return;
+  const recordedAt = button.dataset.deleteObservation;
+  const label = new Date(recordedAt).toLocaleString();
+  if (!window.confirm(`Delete the observation from ${label}? This cannot be undone.`)) return;
+  await deleteObservations([recordedAt]);
 });
 
 const bottomNavLinks = [...document.querySelectorAll('#bottom-nav a[data-nav]')];

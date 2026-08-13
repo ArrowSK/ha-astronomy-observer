@@ -206,6 +206,8 @@ def validate_web_and_security() -> None:
     ]
     if any(path not in source for path in required_server_paths):
         fail("web server is missing required endpoints")
+    if 'Method::Delete, "/api/observations"' not in source:
+        fail("web server is missing observation deletion endpoint")
     required_markers = [
         "person-select",
         "minimum-altitude",
@@ -226,6 +228,10 @@ def validate_web_and_security() -> None:
         "sourceStatusKind",
         "outlook_details",
         "Copy dashboard YAML",
+        "history-select-visible",
+        "delete-selected",
+        "data-delete-observation",
+        "<span>Forecast</span>",
         "10.5880/GFZ.1.4.2016.001",
     ]
     for marker in required_markers:

@@ -73,4 +73,4 @@ Third-party code and data keep their own licences. The bundled World Atlas deriv
 
 ## Release status
 
-`0.2.2` remains marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and the bundled light-pollution atlas is a 2015 planning baseline rather than a live sky-quality measurement.
+`0.2.3` remains marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and the bundled light-pollution atlas is a 2015 planning baseline rather than a live sky-quality measurement.

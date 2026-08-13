@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3 - 2026-08-13
+
+- Renamed the bottom navigation label from **Outlook** to **Forecast** while keeping the seven-night section and its internal anchor compatible.
+- Added per-entry delete controls to the Observation journal.
+- Added list-level multi-selection, **Select visible**, and **Delete selected** for removing several journal entries together.
+- Added confirmation prompts before every journal deletion and an authenticated Ingress `DELETE /api/observations` endpoint for permanent local removal.
+- Journal deletion rewrites the local JSONL file atomically and preserves unrelated or unparsable lines rather than silently discarding them.
+- Added a runtime regression test for selective observation deletion and updated repository validation/documentation.
+
 ## 0.2.2 - 2026-08-13
 
 - Added a persistent Android-style bottom navigation bar for quick jumps between Tonight, Conditions, Targets, Outlook and Sources.

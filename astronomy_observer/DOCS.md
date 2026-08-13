@@ -329,7 +329,9 @@ Each entry is saved with the current forecast component scores and location labe
 - filtering to entries that contain SQM, seeing, transparency, limiting magnitude or text notes;
 - limiting the view to the last 7, 30 or 90 days, or showing all available history.
 
-The full append-only file remains in the app's persistent `/data` directory. The log is intended to support local calibration over time. It does not automatically change the scoring model in this release.
+Journal entries can also be removed. Each visible entry has its own delete control, while the history list supports selecting individual rows or all currently visible rows and deleting the selected set together. Deletion always asks for confirmation and permanently removes those records from the local journal file. Search and filters only change what is visible; they do not delete anything by themselves.
+
+The journal file remains in the app's persistent `/data` directory. It is rewritten atomically when records are deleted. The log is intended to support local calibration over time. It does not automatically change the scoring model in this release.
 
 ## Source status
 

@@ -5,6 +5,7 @@ use crate::models::Snapshot;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::net::IpAddr;
@@ -42,6 +43,11 @@ struct ObservationRecord {
     forecast_score: Option<f64>,
     forecast_transparency: Option<f64>,
     forecast_seeing_proxy: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ObservationDeleteInput {
+    recorded_at: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -194,6 +200,95 @@ fn recent_observations(path: &Path, limit: usize) -> Vec<ObservationRecord> {
     }
     values.reverse();
     values
+}
+
+fn delete_observations(path: &Path, recorded_at: &HashSet<String>) -> Result<usize, String> {
+    if recorded_at.is_empty() {
+        return Ok(0);
+    }
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(error) => return Err(error.to_string()),
+    };
+
+    let mut kept = Vec::new();
+    let mut deleted = 0usize;
+    for line in text.lines() {
+        match serde_json::from_str::<ObservationRecord>(line) {
+            Ok(record) if recorded_at.contains(record.recorded_at.as_str()) => {
+                deleted += 1;
+            }
+            _ => kept.push(line),
+        }
+    }
+
+    if deleted == 0 {
+        return Ok(0);
+    }
+
+    let temporary = path.with_extension("jsonl.tmp");
+    let body = if kept.is_empty() {
+        String::new()
+    } else {
+        format!("{}\n", kept.join("\n"))
+    };
+    fs::write(&temporary, body).map_err(|error| error.to_string())?;
+    if let Err(error) = fs::rename(&temporary, path) {
+        let _ = fs::remove_file(&temporary);
+        return Err(error.to_string());
+    }
+    Ok(deleted)
+}
+
+fn handle_delete_observations(mut request: Request, data_dir: &Path) {
+    let text = match read_limited_body(&mut request) {
+        Ok(text) => text,
+        Err(error) => {
+            let _ = request.respond(json_response(json!({"error": error}), 413));
+            return;
+        }
+    };
+    let input: ObservationDeleteInput = match serde_json::from_str(&text) {
+        Ok(input) => input,
+        Err(_) => {
+            let _ = request.respond(json_response(json!({"error": "invalid JSON"}), 400));
+            return;
+        }
+    };
+    if input.recorded_at.len() > 100 {
+        let _ = request.respond(json_response(
+            json!({"error": "at most 100 observations can be deleted at once"}),
+            400,
+        ));
+        return;
+    }
+    let recorded_at: HashSet<String> = input
+        .recorded_at
+        .into_iter()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect();
+    if recorded_at.is_empty() {
+        let _ = request.respond(json_response(
+            json!({"error": "select at least one observation to delete"}),
+            400,
+        ));
+        return;
+    }
+
+    match delete_observations(&observation_path(data_dir), &recorded_at) {
+        Ok(deleted) => {
+            let _ = request.respond(json_response(json!({"deleted": deleted}), 200));
+        }
+        Err(error) => {
+            eprintln!("Could not delete observation: {error}");
+            let _ = request.respond(json_response(
+                json!({"error": "could not delete observation"}),
+                500,
+            ));
+        }
+    }
 }
 
 fn handle_observation(
@@ -394,6 +489,9 @@ pub fn serve(
                     let records = recent_observations(&observation_path(&data_dir), 50);
                     let _ = request.respond(json_response(json!(records), 200));
                 }
+                (Method::Delete, "/api/observations") => {
+                    handle_delete_observations(request, &data_dir);
+                }
                 (Method::Post, "/api/observation") => {
                     handle_observation(request, &snapshot, &data_dir);
                 }
@@ -432,6 +530,24 @@ mod tests {
             notes: "clear and steady".to_string(),
         };
         assert!(validate_observation(&valid).is_ok());
+    }
+
+    #[test]
+    fn deletes_selected_observations_without_touching_other_lines() {
+        let path = std::env::temp_dir().join(format!(
+            "astronomy-observer-delete-test-{}-{}.jsonl",
+            std::process::id(),
+            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        let first = r#"{"recorded_at":"2026-08-13T01:00:00Z","location":"A","sqm":null,"seeing_arcsec":null,"transparency":null,"limiting_magnitude":null,"notes":"first","forecast_score":null,"forecast_transparency":null,"forecast_seeing_proxy":null}"#;
+        let second = r#"{"recorded_at":"2026-08-13T02:00:00Z","location":"B","sqm":null,"seeing_arcsec":null,"transparency":null,"limiting_magnitude":null,"notes":"second","forecast_score":null,"forecast_transparency":null,"forecast_seeing_proxy":null}"#;
+        fs::write(&path, format!("{first}\n{second}\n")).unwrap();
+        let selected = HashSet::from(["2026-08-13T01:00:00Z".to_string()]);
+        assert_eq!(delete_observations(&path, &selected).unwrap(), 1);
+        let remaining = fs::read_to_string(&path).unwrap();
+        assert!(!remaining.contains("first"));
+        assert!(remaining.contains("second"));
+        let _ = fs::remove_file(path);
     }
 
     #[test]
