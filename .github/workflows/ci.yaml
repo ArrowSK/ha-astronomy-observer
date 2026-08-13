@@ -106,3 +106,23 @@ jobs:
             -c astronomy_observer/scripts/astro_helper.c \
             -o /tmp/astro-helper.o
           cc /tmp/astro-helper.o /tmp/astronomy.o -lm -o /tmp/astro-helper
+
+      - name: Build standalone web image
+        run: docker build -f webapp/Dockerfile -t astronomy-observer-web:test .
+
+      - name: Smoke-test standalone web image
+        run: |
+          docker run -d --name astronomy-observer-web-test -e PORT=8080 -p 18080:8080 astronomy-observer-web:test
+          trap 'docker rm -f astronomy-observer-web-test >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18080/health | grep -qx ok
+          curl --fail --silent http://127.0.0.1:18080/ | grep -q 'Astronomy Observer'
+          curl --fail --silent http://127.0.0.1:18080/api/platform | python3 -c 'import json,sys; value=json.load(sys.stdin); assert value["platform"] == "web"; assert value["shared_runtime"] is True; assert value["stateless"] is True'
+          status=$(curl --silent --output /tmp/invalid.json --write-out '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"location":{"latitude":999,"longitude":0,"timezone":"UTC"}}' http://127.0.0.1:18080/api/web/snapshot)
+          test "$status" = "400"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/api/observations)" = "404"
