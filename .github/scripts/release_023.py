@@ -1,0 +1,427 @@
+from pathlib import Path
+
+
+def replace_once(path: str, old: str, new: str) -> None:
+    p = Path(path)
+    text = p.read_text(encoding="utf-8")
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"{path}: expected one occurrence, found {count}")
+    p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+replace_once("astronomy_observer/config.yaml", 'version: "0.2.2"', 'version: "0.2.3"')
+replace_once("astronomy_observer/Dockerfile", "ARG BUILD_VERSION=0.2.2", "ARG BUILD_VERSION=0.2.3")
+
+# Backend: delete one or more journal records by their exact recorded_at value.
+web_rs = Path("astronomy_observer/src/web.rs")
+text = web_rs.read_text(encoding="utf-8")
+replace_import = "use serde_json::json;\nuse std::fs::{self, OpenOptions};"
+if replace_import not in text:
+    raise SystemExit("web.rs: import marker not found")
+text = text.replace(
+    replace_import,
+    "use serde_json::json;\nuse std::collections::HashSet;\nuse std::fs::{self, OpenOptions};",
+    1,
+)
+
+marker = "#[derive(Debug, Deserialize)]\nstruct SettingsInput {"
+insert = "#[derive(Debug, Deserialize)]\nstruct ObservationDeleteInput {\n    recorded_at: Vec<String>,\n}\n\n#[derive(Debug, Deserialize)]\nstruct SettingsInput {"
+if marker not in text:
+    raise SystemExit("web.rs: SettingsInput marker not found")
+text = text.replace(marker, insert, 1)
+
+marker = "fn handle_observation(\n    mut request: Request,"
+delete_helpers = '''fn delete_observations(path: &Path, recorded_at: &HashSet<String>) -> Result<usize, String> {
+    if recorded_at.is_empty() {
+        return Ok(0);
+    }
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(error) => return Err(error.to_string()),
+    };
+
+    let mut kept = Vec::new();
+    let mut deleted = 0usize;
+    for line in text.lines() {
+        match serde_json::from_str::<ObservationRecord>(line) {
+            Ok(record) if recorded_at.contains(record.recorded_at.as_str()) => {
+                deleted += 1;
+            }
+            _ => kept.push(line),
+        }
+    }
+
+    if deleted == 0 {
+        return Ok(0);
+    }
+
+    let temporary = path.with_extension("jsonl.tmp");
+    let body = if kept.is_empty() {
+        String::new()
+    } else {
+        format!("{}\\n", kept.join("\\n"))
+    };
+    fs::write(&temporary, body).map_err(|error| error.to_string())?;
+    if let Err(error) = fs::rename(&temporary, path) {
+        let _ = fs::remove_file(&temporary);
+        return Err(error.to_string());
+    }
+    Ok(deleted)
+}
+
+fn handle_delete_observations(mut request: Request, data_dir: &Path) {
+    let text = match read_limited_body(&mut request) {
+        Ok(text) => text,
+        Err(error) => {
+            let _ = request.respond(json_response(json!({"error": error}), 413));
+            return;
+        }
+    };
+    let input: ObservationDeleteInput = match serde_json::from_str(&text) {
+        Ok(input) => input,
+        Err(_) => {
+            let _ = request.respond(json_response(json!({"error": "invalid JSON"}), 400));
+            return;
+        }
+    };
+    if input.recorded_at.len() > 100 {
+        let _ = request.respond(json_response(
+            json!({"error": "at most 100 observations can be deleted at once"}),
+            400,
+        ));
+        return;
+    }
+    let recorded_at: HashSet<String> = input
+        .recorded_at
+        .into_iter()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect();
+    if recorded_at.is_empty() {
+        let _ = request.respond(json_response(
+            json!({"error": "select at least one observation to delete"}),
+            400,
+        ));
+        return;
+    }
+
+    match delete_observations(&observation_path(data_dir), &recorded_at) {
+        Ok(deleted) => {
+            let _ = request.respond(json_response(json!({"deleted": deleted}), 200));
+        }
+        Err(error) => {
+            eprintln!("Could not delete observation: {error}");
+            let _ = request.respond(json_response(
+                json!({"error": "could not delete observation"}),
+                500,
+            ));
+        }
+    }
+}
+
+fn handle_observation(
+    mut request: Request,'''
+if marker not in text:
+    raise SystemExit("web.rs: handle_observation marker not found")
+text = text.replace(marker, delete_helpers, 1)
+
+route = '''                (Method::Get, "/api/observations") => {
+                    let records = recent_observations(&observation_path(&data_dir), 50);
+                    let _ = request.respond(json_response(json!(records), 200));
+                }
+                (Method::Post, "/api/observation") => {'''
+route_new = '''                (Method::Get, "/api/observations") => {
+                    let records = recent_observations(&observation_path(&data_dir), 50);
+                    let _ = request.respond(json_response(json!(records), 200));
+                }
+                (Method::Delete, "/api/observations") => {
+                    handle_delete_observations(request, &data_dir);
+                }
+                (Method::Post, "/api/observation") => {'''
+if route not in text:
+    raise SystemExit("web.rs: observations route marker not found")
+text = text.replace(route, route_new, 1)
+
+test_marker = "    #[test]\n    fn validates_simple_setup() {"
+test_insert = '''    #[test]
+    fn deletes_selected_observations_without_touching_other_lines() {
+        let path = std::env::temp_dir().join(format!(
+            "astronomy-observer-delete-test-{}-{}.jsonl",
+            std::process::id(),
+            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        let first = r#"{"recorded_at":"2026-08-13T01:00:00Z","location":"A","sqm":null,"seeing_arcsec":null,"transparency":null,"limiting_magnitude":null,"notes":"first","forecast_score":null,"forecast_transparency":null,"forecast_seeing_proxy":null}"#;
+        let second = r#"{"recorded_at":"2026-08-13T02:00:00Z","location":"B","sqm":null,"seeing_arcsec":null,"transparency":null,"limiting_magnitude":null,"notes":"second","forecast_score":null,"forecast_transparency":null,"forecast_seeing_proxy":null}"#;
+        fs::write(&path, format!("{first}\\n{second}\\n")).unwrap();
+        let selected = HashSet::from(["2026-08-13T01:00:00Z".to_string()]);
+        assert_eq!(delete_observations(&path, &selected).unwrap(), 1);
+        let remaining = fs::read_to_string(&path).unwrap();
+        assert!(!remaining.contains("first"));
+        assert!(remaining.contains("second"));
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn validates_simple_setup() {'''
+if test_marker not in text:
+    raise SystemExit("web.rs: test marker not found")
+text = text.replace(test_marker, test_insert, 1)
+web_rs.write_text(text, encoding="utf-8")
+
+# Ingress UI.
+index = Path("astronomy_observer/web/index.html")
+html = index.read_text(encoding="utf-8")
+if html.count("<span>Outlook</span></a>") != 1:
+    raise SystemExit("index.html: expected one Outlook bottom-nav label")
+html = html.replace("<span>Outlook</span></a>", "<span>Forecast</span></a>", 1)
+
+css_marker = '''    .saved-note { padding: 9px 0; border-top: 1px solid var(--line); }
+    .saved-note:first-child { border-top: 0; }
+    .history-panel { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }'''
+css_new = '''    .saved-note { display: grid; grid-template-columns: 28px minmax(0, 1fr) 44px; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+    .saved-note:first-child { border-top: 0; }
+    .saved-note-main { min-width: 0; }
+    .observation-select { display: grid; place-items: center; min-height: 42px; }
+    .observation-select input, .history-bulk input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+    .observation-delete { width: 42px; height: 42px; padding: 0; display: grid; place-items: center; color: var(--bad); background: transparent; }
+    .observation-delete:hover { border-color: var(--bad); background: rgba(231,123,123,.07); }
+    .observation-delete svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .history-panel { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }'''
+if css_marker not in html:
+    raise SystemExit("index.html: saved-note CSS marker not found")
+html = html.replace(css_marker, css_new, 1)
+
+css_marker = '''    .history-controls { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+
+    .setup-grid'''
+css_new = '''    .history-controls { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+    .history-bulk { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 48px; margin: 8px 0 2px; }
+    .history-bulk label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--muted); cursor: pointer; }
+    .history-bulk .delete-selected { min-height: 44px; color: var(--bad); }
+    .history-bulk .delete-selected:not(:disabled):hover { border-color: var(--bad); background: rgba(231,123,123,.07); }
+    .history-bulk .delete-selected:disabled { opacity: .45; cursor: default; }
+
+    .setup-grid'''
+if css_marker not in html:
+    raise SystemExit("index.html: history controls CSS marker not found")
+html = html.replace(css_marker, css_new, 1)
+
+controls_marker = '''      </div>
+      <div id="observation-list" style="margin-top:8px"></div>
+    </details>'''
+controls_new = '''      </div>
+      <div class="history-bulk">
+        <label><input id="history-select-visible" type="checkbox"> Select visible</label>
+        <button id="delete-selected" class="delete-selected" type="button" disabled>Delete selected</button>
+        <span id="delete-status" class="muted" aria-live="polite"></span>
+      </div>
+      <div id="observation-list" style="margin-top:8px"></div>
+    </details>'''
+if controls_marker not in html:
+    raise SystemExit("index.html: observation-list marker not found")
+html = html.replace(controls_marker, controls_new, 1)
+
+state_marker = "let observationRows = [];\nlet currentSnapshot = null;"
+state_new = "let observationRows = [];\nlet selectedObservationTimes = new Set();\nlet visibleObservationTimes = [];\nlet currentSnapshot = null;"
+if state_marker not in html:
+    raise SystemExit("index.html: observation state marker not found")
+html = html.replace(state_marker, state_new, 1)
+
+start = html.find("function renderObservationHistory() {")
+end = html.find("async function loadObservations() {", start)
+if start < 0 or end < 0:
+    raise SystemExit("index.html: renderObservationHistory block not found")
+replacement = '''function filteredObservationRows() {
+  const query = $('history-search').value.trim().toLowerCase();
+  const filter = $('history-filter').value;
+  const period = $('history-period').value;
+  const now = Date.now();
+  return observationRows.filter(row => {
+    if (!observationMatchesFilter(row, filter)) return false;
+    if (period !== 'all') {
+      const recorded = new Date(row.recorded_at).getTime();
+      const maxAge = Number(period) * 86400000;
+      if (!Number.isFinite(recorded) || now - recorded > maxAge) return false;
+    }
+    if (!query) return true;
+    const searchable = [
+      new Date(row.recorded_at).toLocaleString(), row.location, row.notes,
+      row.sqm, row.seeing_arcsec, row.transparency, row.limiting_magnitude, row.forecast_score
+    ].filter(value => value != null).join(' ').toLowerCase();
+    return searchable.includes(query);
+  });
+}
+
+function updateHistorySelectionControls() {
+  const selectedVisible = visibleObservationTimes.filter(value => selectedObservationTimes.has(value)).length;
+  const selectVisible = $('history-select-visible');
+  selectVisible.checked = visibleObservationTimes.length > 0 && selectedVisible === visibleObservationTimes.length;
+  selectVisible.indeterminate = selectedVisible > 0 && selectedVisible < visibleObservationTimes.length;
+  selectVisible.disabled = visibleObservationTimes.length === 0;
+  $('delete-selected').disabled = selectedObservationTimes.size === 0;
+  $('delete-selected').textContent = selectedObservationTimes.size
+    ? `Delete selected (${selectedObservationTimes.size})`
+    : 'Delete selected';
+}
+
+function renderObservationHistory() {
+  const rows = filteredObservationRows();
+  visibleObservationTimes = rows.map(row => row.recorded_at);
+  const available = new Set(observationRows.map(row => row.recorded_at));
+  selectedObservationTimes = new Set([...selectedObservationTimes].filter(value => available.has(value)));
+  $('history-count').textContent = rows.length === observationRows.length ? `${rows.length} entries` : `${rows.length} of ${observationRows.length}`;
+  $('observation-list').innerHTML = rows.length ? rows.map(row => {
+    const details = [
+      row.sqm == null ? null : `SQM ${n(row.sqm,2)}`,
+      row.seeing_arcsec == null ? null : `seeing ${n(row.seeing_arcsec,1,'″')}`,
+      row.transparency == null ? null : `transparency ${row.transparency}/5`,
+      row.limiting_magnitude == null ? null : `NELM ${n(row.limiting_magnitude,1)}`,
+      row.forecast_score == null ? null : `forecast ${n(row.forecast_score,0,'/100')}`,
+    ].filter(Boolean).join(' · ');
+    const recordedLabel = new Date(row.recorded_at).toLocaleString();
+    const selected = selectedObservationTimes.has(row.recorded_at) ? ' checked' : '';
+    return `<div class="saved-note">
+      <label class="observation-select"><input type="checkbox" data-select-observation="${esc(row.recorded_at)}" aria-label="Select observation from ${esc(recordedLabel)}"${selected}></label>
+      <div class="saved-note-main"><div><strong>${esc(recordedLabel)}</strong> · ${esc(row.location)}</div><div class="target-meta">${esc(details || 'field note')}</div>${row.notes ? `<div style="margin-top:3px">${esc(row.notes)}</div>` : ''}</div>
+      <button class="observation-delete" type="button" data-delete-observation="${esc(row.recorded_at)}" aria-label="Delete observation from ${esc(recordedLabel)}" title="Delete observation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg></button>
+    </div>`;
+  }).join('') : '<div class="muted" style="padding:10px 0">No observations match the current search and filters.</div>';
+  updateHistorySelectionControls();
+}
+
+async function deleteObservations(recordedAt) {
+  $('delete-status').textContent = 'Deleting…';
+  $('delete-selected').disabled = true;
+  try {
+    const response = await fetch('api/observations', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({recorded_at: recordedAt})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    recordedAt.forEach(value => selectedObservationTimes.delete(value));
+    await loadObservations();
+    $('delete-status').textContent = `${result.deleted ?? 0} deleted`;
+    setTimeout(() => { if ($('delete-status').textContent.endsWith('deleted')) $('delete-status').textContent = ''; }, 1800);
+  } catch (error) {
+    $('delete-status').textContent = `Unable to delete: ${error.message}`;
+    updateHistorySelectionControls();
+  }
+}
+
+'''
+html = html[:start] + replacement + html[end:]
+
+listener_marker = '''['history-search', 'history-filter', 'history-period'].forEach(id => {
+  $(id).addEventListener(id === 'history-search' ? 'input' : 'change', renderObservationHistory);
+});
+
+const bottomNavLinks'''
+listener_new = '''['history-search', 'history-filter', 'history-period'].forEach(id => {
+  $(id).addEventListener(id === 'history-search' ? 'input' : 'change', renderObservationHistory);
+});
+
+$('history-select-visible').addEventListener('change', event => {
+  visibleObservationTimes.forEach(value => {
+    if (event.target.checked) selectedObservationTimes.add(value);
+    else selectedObservationTimes.delete(value);
+  });
+  renderObservationHistory();
+});
+
+$('delete-selected').addEventListener('click', async () => {
+  const values = [...selectedObservationTimes];
+  if (!values.length) return;
+  if (!window.confirm(`Delete ${values.length} selected observation${values.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+  await deleteObservations(values);
+});
+
+$('observation-list').addEventListener('change', event => {
+  const checkbox = event.target.closest('[data-select-observation]');
+  if (!checkbox) return;
+  if (checkbox.checked) selectedObservationTimes.add(checkbox.dataset.selectObservation);
+  else selectedObservationTimes.delete(checkbox.dataset.selectObservation);
+  updateHistorySelectionControls();
+});
+
+$('observation-list').addEventListener('click', async event => {
+  const button = event.target.closest('[data-delete-observation]');
+  if (!button) return;
+  const recordedAt = button.dataset.deleteObservation;
+  const label = new Date(recordedAt).toLocaleString();
+  if (!window.confirm(`Delete the observation from ${label}? This cannot be undone.`)) return;
+  await deleteObservations([recordedAt]);
+});
+
+const bottomNavLinks'''
+if listener_marker not in html:
+    raise SystemExit("index.html: history listener marker not found")
+html = html.replace(listener_marker, listener_new, 1)
+index.write_text(html, encoding="utf-8")
+
+# Documentation.
+docs = Path("astronomy_observer/DOCS.md")
+d = docs.read_text(encoding="utf-8")
+d = d.replace("Tonight, Conditions, Targets, Outlook and Sources", "Tonight, Conditions, Targets, Forecast and Sources")
+old = "The full append-only file remains in the app's persistent `/data` directory. The log is intended to support local calibration over time. It does not automatically change the scoring model in this release."
+new = "Journal entries can also be removed. Each visible entry has its own delete control, while the history list supports selecting individual rows or all currently visible rows and deleting the selected set together. Deletion always asks for confirmation and permanently removes those records from the local journal file. Search and filters only change what is visible; they do not delete anything by themselves.\n\nThe journal file remains in the app's persistent `/data` directory. It is rewritten atomically when records are deleted. The log is intended to support local calibration over time. It does not automatically change the scoring model in this release."
+if old not in d:
+    raise SystemExit("DOCS.md: observation persistence paragraph not found")
+d = d.replace(old, new, 1)
+docs.write_text(d, encoding="utf-8")
+
+entry = '''## 0.2.3 - 2026-08-13
+
+- Renamed the bottom navigation label from **Outlook** to **Forecast** while keeping the seven-night section and its internal anchor compatible.
+- Added per-entry delete controls to the Observation journal.
+- Added list-level multi-selection, **Select visible**, and **Delete selected** for removing several journal entries together.
+- Added confirmation prompts before every journal deletion and an authenticated Ingress `DELETE /api/observations` endpoint for permanent local removal.
+- Journal deletion rewrites the local JSONL file atomically and preserves unrelated or unparsable lines rather than silently discarding them.
+- Added a runtime regression test for selective observation deletion and updated repository validation/documentation.
+
+'''
+for path in ["astronomy_observer/CHANGELOG.md", "CHANGELOG.md"]:
+    p = Path(path)
+    c = p.read_text(encoding="utf-8")
+    if "## 0.2.3 - 2026-08-13" not in c:
+        if not c.startswith("# Changelog\n\n"):
+            raise SystemExit(f"{path}: unexpected changelog header")
+        c = "# Changelog\n\n" + entry + c[len("# Changelog\n\n"):]
+        p.write_text(c, encoding="utf-8")
+
+for path in ["README.md", "astronomy_observer/README.md"]:
+    p = Path(path)
+    r = p.read_text(encoding="utf-8")
+    r = r.replace("`0.2.2` remains marked experimental", "`0.2.3` remains marked experimental")
+    p.write_text(r, encoding="utf-8")
+
+validator = Path("tests/validate_repository.py")
+v = validator.read_text(encoding="utf-8")
+marker = '''        "Copy dashboard YAML",
+        "10.5880/GFZ.1.4.2016.001",'''
+new_marker = '''        "Copy dashboard YAML",
+        "history-select-visible",
+        "delete-selected",
+        "data-delete-observation",
+        "<span>Forecast</span>",
+        "10.5880/GFZ.1.4.2016.001",'''
+if marker not in v:
+    raise SystemExit("validate_repository.py: marker list location not found")
+v = v.replace(marker, new_marker, 1)
+route_marker = '''    if any(path not in source for path in required_server_paths):
+        fail("web server is missing required endpoints")'''
+route_new = '''    if any(path not in source for path in required_server_paths):
+        fail("web server is missing required endpoints")
+    if 'Method::Delete, "/api/observations"' not in source:
+        fail("web server is missing observation deletion endpoint")'''
+if route_marker not in v:
+    raise SystemExit("validate_repository.py: server-path check not found")
+v = v.replace(route_marker, route_new, 1)
+validator.write_text(v, encoding="utf-8")
+
+# Remove temporary updater files from the release commit.
+Path(".github/workflows/release-023-once.yaml").unlink(missing_ok=True)
+Path(".github/scripts/release_023.py").unlink(missing_ok=True)
