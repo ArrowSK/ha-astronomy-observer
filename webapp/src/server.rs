@@ -57,7 +57,10 @@ fn html_response(body: String) -> Response<std::io::Cursor<Vec<u8>>> {
 }
 
 fn read_body(request: &mut Request) -> Result<String, String> {
-    if request.body_length().is_some_and(|length| length > MAX_BODY) {
+    if request
+        .body_length()
+        .is_some_and(|length| length > MAX_BODY)
+    {
         return Err("request body too large".to_string());
     }
     let mut bytes = Vec::new();
@@ -139,9 +142,8 @@ fn handle_request(request: Request, index: &str, temp_root: &Path, config_dir: &
             let _ = request.respond(json_response(json!({"accepted": true}), 202));
         }
         _ => {
-            let _ = request.respond(
-                Response::from_string("not found").with_status_code(StatusCode(404)),
-            );
+            let _ = request
+                .respond(Response::from_string("not found").with_status_code(StatusCode(404)));
         }
     }
 }
@@ -175,7 +177,10 @@ pub fn run() -> AppResult<()> {
     let index = Arc::new(ui::web_index()?);
     let server = Server::http(format!("0.0.0.0:{port}"))
         .map_err(|error| err(format!("could not start web server: {error}")))?;
-    println!("Astronomy Observer Web {} listening on port {port}", app_version());
+    println!(
+        "Astronomy Observer Web {} listening on port {port}",
+        app_version()
+    );
 
     for request in server.incoming_requests() {
         let index = index.clone();
