@@ -25,7 +25,9 @@ pub fn web_index() -> AppResult<String> {
       </div>"#;
 
     if !BASE_INDEX.contains(old_location) {
-        return Err(err("shared interface location marker changed; update the web adapter"));
+        return Err(err(
+            "shared interface location marker changed; update the web adapter",
+        ));
     }
     let mut html = BASE_INDEX.replacen(old_location, new_location, 1);
     html = html.replacen(
@@ -56,7 +58,9 @@ pub fn web_index() -> AppResult<String> {
 
     let old_tail = "load();\nupdateBottomNav();\nsetInterval(load, 60000);";
     if !html.contains(old_tail) {
-        return Err(err("shared interface startup marker changed; update the web adapter"));
+        return Err(err(
+            "shared interface startup marker changed; update the web adapter",
+        ));
     }
     html = html.replacen(old_tail, WEB_SCRIPT, 1);
     Ok(html)
