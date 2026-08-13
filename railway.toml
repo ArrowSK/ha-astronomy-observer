@@ -2,3 +2,7 @@
 builder = "DOCKERFILE"
 dockerfilePath = "webapp/Dockerfile"
 watchPatterns = ["astronomy_observer/**", "webapp/**", "railway.toml"]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 60
