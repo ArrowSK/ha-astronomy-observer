@@ -50,6 +50,14 @@ No light-pollution file is required. Astronomy Observer looks up the selected lo
 
 The full setup and operating guide is in [`astronomy_observer/DOCS.md`](astronomy_observer/DOCS.md).
 
+## Standalone Docker / web counterpart
+
+The same repository now also contains a standalone Docker web adapter in [`webapp/`](webapp/). It compiles the same astronomy, weather, scoring, target-ranking and light-pollution Rust modules used by the Home Assistant app and starts from the same Ingress HTML interface. The web-specific layer only replaces Home Assistant location/setup handling with an explicit observing-site form and a public snapshot endpoint.
+
+The Home Assistant runtime is not exposed or weakened to make this work: its Supervisor-token handling, entity publishing and Ingress source-address restriction remain in the HA app. The standalone server is a separate binary/container. A prepared [`railway.toml`](railway.toml) points Railway at `webapp/Dockerfile`, but the repository does not create or deploy a Railway service automatically.
+
+See [Standalone web deployment](docs/WEBAPP.md) for Docker, Railway, privacy and drift-control details.
+
 ## Documentation
 
 - [Installation, configuration and Home Assistant entities](astronomy_observer/DOCS.md)
@@ -58,6 +66,7 @@ The full setup and operating guide is in [`astronomy_observer/DOCS.md`](astronom
 - [Light pollution and sky brightness](docs/LIGHT_POLLUTION.md)
 - [Privacy and location handling](docs/PRIVACY.md)
 - [Architecture and resource budget](docs/ARCHITECTURE.md)
+- [Standalone web deployment](docs/WEBAPP.md)
 - [Local Ingress endpoints](docs/API.md)
 - [Scientific and technical references](docs/SCIENTIFIC_REFERENCES.md)
 - [Development and validation](docs/DEVELOPMENT.md)
