@@ -1,27 +1,23 @@
-name: One-time branch cleanup
+name: Delete merged topic branch
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types:
+      - closed
 
 permissions:
   contents: write
 
 jobs:
   cleanup:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref != github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
-      - name: Delete verified merged topic branches
+      - name: Delete merged topic branch
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -eu
-          for branch in initial-implementation license-canonical-text; do
-            if gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${branch}" >/dev/null 2>&1; then
-              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}"
-              echo "deleted ${branch}"
-            else
-              echo "already absent: ${branch}"
-            fi
-          done
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${HEAD_REF}"
