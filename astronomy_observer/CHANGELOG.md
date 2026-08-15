@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 - 2026-08-15
+
+- Added a self-contained Android edition that can be sideloaded without Home Assistant or an Astronomy Observer server.
+- Android packages the shared interface, Rust observing engine, pinned Astronomy Engine C code, reduced OpenNGC observing catalogue, meteor-shower table and compact World Atlas light-pollution grid inside the APK.
+- Added optional phone-location access plus manual site coordinates; exact observing coordinates remain local for astronomical calculations.
+- Kept the Android WebView local-only: remote page/subresource loading is blocked and explicit external links open in the normal browser.
+- Added a narrow Java/JNI/native bridge so Android compiles the same Rust scoring, target-ranking, weather, light-pollution, comet, satellite and aurora modules as the Home Assistant and Docker editions rather than maintaining a second calculation implementation.
+- Added an Android-only offline planning fallback: if live weather and its recent cache are both unavailable, local astronomy can still be calculated with weather fields unknown and confidence intentionally reduced.
+- Added app-local observation journal persistence and retained the existing search/filter/delete interface behavior on Android.
+- Added reproducible Android build tooling for `arm64-v8a` and `x86_64`, APK inspection checks and a GitHub Actions preview artifact.
+- Added in-app **About & licences** notices and clarified that OpenNGC-derived data remain CC BY-SA 4.0, the World Atlas derivative remains CC BY-NC 4.0 and Astronomy Engine remains MIT rather than being relicensed under the project licence.
+- Expanded the main documentation to present Android, Home Assistant, Docker and Railway/container hosting as first-class ways of using the same observing engine.
+
 ## 0.2.3 - 2026-08-13
 
 - Renamed the bottom navigation label from **Outlook** to **Forecast** while keeping the seven-night section and its internal anchor compatible.
