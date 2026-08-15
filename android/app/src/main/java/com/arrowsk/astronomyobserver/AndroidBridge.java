@@ -52,7 +52,7 @@ final class AndroidBridge {
 
     @JavascriptInterface
     public String version() {
-        return BuildConfig.VERSION_NAME;
+        return "0.3.0";
     }
 
     void shutdown() {
