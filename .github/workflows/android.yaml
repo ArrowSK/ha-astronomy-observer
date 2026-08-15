@@ -1,0 +1,92 @@
+name: Android standalone APK
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "android/**"
+      - "astronomy_observer/src/**"
+      - "astronomy_observer/web/**"
+      - "astronomy_observer/data/**"
+      - "astronomy_observer/scripts/**"
+      - "astronomy_observer/Cargo.toml"
+      - "astronomy_observer/Cargo.lock"
+      - ".github/workflows/android.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "android/**"
+      - "astronomy_observer/src/**"
+      - "astronomy_observer/web/**"
+      - "astronomy_observer/data/**"
+      - "astronomy_observer/scripts/**"
+      - "astronomy_observer/Cargo.toml"
+      - "astronomy_observer/Cargo.lock"
+      - ".github/workflows/android.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sideload APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Install Android SDK and NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" \
+            "build-tools;35.0.0" \
+            "ndk;27.0.12077973"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> "$GITHUB_ENV"
+
+      - name: Install Rust 1.89 Android targets
+        run: |
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup default 1.89.0
+          rustup target add aarch64-linux-android x86_64-linux-android
+
+      - name: Validate Android source layout
+        run: python3 android/validate.py
+
+      - name: Build APK
+        run: ./android/build-apk.sh
+
+      - name: Inspect APK contents
+        run: |
+          APK=android/generated/apk/astronomy-observer-0.3.0-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.arrowsk.astronomyobserver'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "versionName='0.3.0'"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libastronomy_observer_android.so'
+          unzip -l "$APK" | grep -q 'lib/x86_64/libastronomy_observer_android.so'
+          unzip -l "$APK" | grep -q 'assets/index.html'
+          unzip -l "$APK" | grep -q 'assets/world_atlas_3min.bin'
+          unzip -l "$APK" | grep -q 'assets/catalog.tsv'
+          unzip -l "$APK" | grep -q 'assets/astronomy-engine-license.txt'
+
+      - name: Upload installable preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: astronomy-observer-0.3.0-android-debug
+          path: android/generated/apk/astronomy-observer-0.3.0-debug.apk
+          if-no-files-found: error
+          retention-days: 30

@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 vendor/
 build/
+android/generated/
+android/.gradle/
+android/app/build/

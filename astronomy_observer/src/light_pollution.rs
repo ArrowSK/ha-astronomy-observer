@@ -2,14 +2,21 @@ use crate::coordinates::haversine_km;
 use crate::models::{DarkSite, Location, SkyBrightness};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 // Falchi et al. use 174 µcd/m² as the reference natural zenith luminance.
 const NATURAL_MCD_M2: f64 = 0.174;
 const ATLAS_MAGIC: &[u8; 8] = b"AOATLS1\0";
 const ATLAS_HEADER_BYTES: u64 = 64;
 const ATLAS_NODATA: u16 = u16::MAX;
-const BUNDLED_ATLAS_PATH: &str = "/usr/share/astronomy-observer/world_atlas_3min.bin";
+const DEFAULT_BUNDLED_ATLAS_PATH: &str = "/usr/share/astronomy-observer/world_atlas_3min.bin";
+
+fn bundled_atlas_path() -> PathBuf {
+    std::env::var_os("ASTRONOMY_RESOURCE_DIR")
+        .map(PathBuf::from)
+        .map(|path| path.join("world_atlas_3min.bin"))
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BUNDLED_ATLAS_PATH))
+}
 
 pub fn artificial_to_sqm(artificial_mcd_m2: f64) -> f64 {
     let total = NATURAL_MCD_M2 + artificial_mcd_m2.max(0.0);
@@ -448,7 +455,7 @@ pub fn lookup(
     }
 
     let (bundled_sky, bundled_dark) =
-        binary_lookup(location, Path::new(BUNDLED_ATLAS_PATH), dark_radius_km);
+        binary_lookup(location, &bundled_atlas_path(), dark_radius_km);
     if bundled_sky.sqm_mag_arcsec2.is_some() {
         return (bundled_sky, bundled_dark);
     }

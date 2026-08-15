@@ -1,33 +1,44 @@
 # Astronomy Observer
 
-Astronomy Observer helps answer the questions that matter before you carry a telescope outside: **Is tonight worth observing? When is the best window? And what is actually worth looking at?**
+Astronomy Observer helps with the part of amateur astronomy that is surprisingly hard to answer from an ordinary weather app: **Is tonight actually worth going out? When is the useful window? And what should I point the telescope at?**
 
-It is not limited to Home Assistant. The same observing engine can be used in several ways, depending on how you want to run it.
+It combines weather, darkness, Moon interference, local light pollution, observing geometry and target visibility into one practical view — while still showing the ingredients behind the answer.
 
 ## Highlights
 
-- **More than a weather score.** Cloud layers, transparency, seeing proxy, darkness, Moon interference, wind, dew margin and confidence stay visible instead of being hidden behind a single badge.
-- **Useful target suggestions, not a random object list.** The app ranks up to ten worthwhile targets using altitude, airmass, the local horizon, Moon separation, sky brightness, object type and your configured aperture.
-- **Several ways to run it.** Use the full Home Assistant app, run the standalone web version in Docker, or deploy that same standalone container on Railway.
-- **No account or paid astronomy API required.** Core calculations are local, the light-pollution atlas is bundled, and changing weather/orbital data comes from public sources.
+- **A useful night plan, not just a cloud percentage.** See the best two-hour window, separate deep-sky/planetary/imaging scores, and the conditions that produced them.
+- **Targets are ranked for your sky and your equipment.** Altitude, local horizon, Moon separation, sky brightness, object type and configured aperture all matter.
+- **Light pollution works out of the box.** A compact World Atlas derivative is bundled, so location already affects darkness-sensitive scoring without asking you to find an SQM map or CSV first.
+- **Run it the way that suits you.** Home Assistant, a completely standalone Android APK, self-hosted Docker, or the same web container on Railway/another container host all use the same observing engine.
+- **No Astronomy Observer account and no paid astronomy API.** The project has no telemetry or advertising service. Changing public data are fetched from their documented sources; core astronomy and the bundled catalogues stay local.
 
 ## Choose how to run it
 
+### Android — nothing to host
+
+The Android edition is the most independent way to use Astronomy Observer. The APK contains the interface, Rust observing engine, Astronomy Engine, reduced deep-sky catalogue, meteor-shower table and compact World Atlas light-pollution grid. It does **not** load Astronomy Observer from a website and it does not need Home Assistant, Railway, this repository or any server run by the project owner after installation.
+
+Use the phone's location or enter an observing site manually. Sun/Moon/planet calculations, target geometry, the catalogue, horizon handling, light pollution and the local observation journal work on the device. Fresh weather, comet, satellite and aurora information naturally needs internet access and is requested directly from the documented public providers; recent changing data are cached locally.
+
+If live weather is unavailable and there is no recent cache, the Android app can still make an astronomy-planning snapshot from its local data, but it clearly marks weather as unavailable and lowers confidence rather than pretending that the sky is clear.
+
+See [Android: a standalone Astronomy Observer in your pocket](docs/ANDROID.md) for installation, offline behaviour, privacy and build details.
+
 ### Home Assistant
 
-Best if you already use Home Assistant and want Astronomy Observer to follow a `person` entity, publish entities for dashboards and automations, keep an observation journal, and live inside the normal Home Assistant interface.
+Best if Astronomy Observer should be part of your smart home. The Home Assistant edition can follow a `person` entity, publish sensors for dashboards and automations, use a Home Assistant SQM sensor, and keep the observing interface inside HA Ingress.
 
 Add this repository to the Home Assistant app store:
 
 `https://github.com/ArrowSK/ha-astronomy-observer`
 
-Install **Astronomy Observer** and start it. The default setup uses Home Assistant's Home coordinates. After the first successful refresh, open Astronomy Observer, open the hamburger menu, choose **Setup**, then select a Home Assistant person and the lowest useful altitude for your observing site.
+Install **Astronomy Observer** and start it. The default setup uses Home Assistant's Home coordinates. After the first successful refresh, open Astronomy Observer, open the hamburger menu, choose **Setup**, then select the observer and lowest useful altitude for the site.
 
-The full Home Assistant guide is in [`astronomy_observer/DOCS.md`](astronomy_observer/DOCS.md).
+See the [Home Assistant guide](astronomy_observer/DOCS.md).
 
 ### Standalone Docker web app
 
-You do not need Home Assistant to use the observing engine. The repository also contains a standalone web version in [`webapp/`](webapp/) that reuses the same Rust astronomy, weather, scoring, target-ranking and light-pollution code.
+If you want a browser-based service on your own machine or NAS, build the standalone container. It uses the same astronomy, weather, scoring, target-ranking and light-pollution modules as the Home Assistant and Android editions.
 
 From the repository root:
 
@@ -36,61 +47,65 @@ docker build -f webapp/Dockerfile -t astronomy-observer-web .
 docker run --rm -p 8080:8080 -e PORT=8080 astronomy-observer-web
 ```
 
-Then open `http://localhost:8080` and enter the observing-site location in the web Setup screen.
+Then open `http://localhost:8080` and enter the observing site in Setup.
 
-### Railway
+### Railway or another container host
 
-The standalone web version is also prepared for Railway. The root [`railway.toml`](railway.toml) points Railway at `webapp/Dockerfile` and uses `/health` for deployment health checks.
-
-Connecting this repository to a Railway service gives you the same standalone web application without maintaining a separate codebase. The repository does **not** automatically create or deploy a Railway project; deployment remains an explicit owner action.
+The standalone web container is also prepared for Railway. The root [`railway.toml`](railway.toml) points Railway at `webapp/Dockerfile` and uses `/health` for deployment health checks. The repository does not create a Railway project or deploy anything automatically.
 
 See [Standalone web deployment](docs/WEBAPP.md) for Docker, Railway, privacy and deployment details.
 
-## What Astronomy Observer looks at
+## What goes into the answer
 
-Astronomy Observer is aimed mainly at experienced amateur astronomers, but the interface tries to keep the reasoning understandable. Instead of simply saying that a night is "good" or "bad", it shows the factors behind the result and lets you inspect them individually.
+Astronomy Observer is aimed mainly at amateur observers who want more than a generic “good stargazing” badge, but the interface tries to keep the reasoning readable. Condition rows can be expanded when you want to understand where a value came from.
 
 The current feature set includes:
 
-- Seven-night observing outlook with deep-sky, planetary, imaging, clear-sky, transparency, Moon-impact and confidence detail.
-- Best two-hour observing window for tonight.
-- Total, low, middle and high cloud layers.
-- Visibility, humidity, dew point, aerosol optical depth, surface wind and upper-air wind.
-- Separate overall, deep-sky, planetary and imaging scores.
-- Grouped condition lists that separate observing-quality scores from forecast measurements.
-- Plain-language explanations available directly from the condition rows.
-- Local Sun, Moon and planet calculations.
-- Target-specific Moon separation and altitude penalties.
-- Deep-sky catalogue built from a pinned OpenNGC snapshot.
-- Milky Way / Galactic Centre opportunities.
-- Major meteor showers.
-- Potentially observable active comets from Minor Planet Center elements.
-- Visible-satellite passes from CelesTrak orbital elements, with unknown brightness deliberately de-weighted.
-- Category-aware Top 10 selection so satellites and comets cannot crowd out a normal observing programme.
-- NOAA OVATION aurora probability.
-- Simple lowest-useful-altitude horizon setup, with an optional advanced directional mask.
-- Telescope and binocular aperture filtering.
-- Automatic location-based light-pollution estimate from the bundled World Atlas derivative.
-- Fixed SQM, Home Assistant SQM sensor and higher-resolution local CSV overrides when better local data is available.
-- Nearby darker-area search from the built-in atlas without manual setup.
-- Source-status indicators showing current/local, cached/fallback and unavailable data.
+- best two-hour observing window for tonight;
+- seven-night forecast with deep-sky, planetary, imaging, clear-sky, transparency, Moon-impact and confidence detail;
+- total, low, middle and high cloud layers;
+- visibility, humidity, dew point, aerosol optical depth, surface wind and upper-air wind;
+- separate overall, deep-sky, planetary and imaging scores;
+- relative seeing estimate, with no fake arcsecond precision;
+- local Sun, Moon and planet calculations;
+- target-specific Moon separation, altitude, airmass and horizon penalties;
+- a reduced observing catalogue built from a pinned OpenNGC snapshot;
+- Milky Way / Galactic Centre opportunities and major meteor showers;
+- current active-comet candidates from Minor Planet Center elements;
+- visible-satellite passes from CelesTrak elements, with unknown brightness deliberately de-weighted;
+- category-aware Top 10 selection so satellites or comets cannot crowd out the normal observing programme;
+- NOAA OVATION aurora probability;
+- simple lowest-useful-altitude setup plus an optional directional horizon mask;
+- telescope and binocular aperture filtering;
+- automatic location-based light-pollution estimate from the bundled World Atlas derivative;
+- nearby darker-area search from that atlas;
+- source-status indicators showing current/local, cached/fallback and unavailable inputs.
 
-The Home Assistant version additionally provides `person`-based location, HA entities, dashboard/automation support, the Ingress view and the local observation journal.
+Some integrations are edition-specific. Home Assistant adds `person` tracking, HA entities/dashboard/automation support and optional HA SQM input. Android adds on-device location and a self-contained local runtime. The web edition provides a normal HTTP service suitable for Docker hosting.
 
-## Light pollution
+## Light pollution without another setup project
 
-No separate light-pollution file is required for normal use. Astronomy Observer looks up the selected location in its bundled approximately 3-arcminute World Atlas grid and uses that estimate when calculating overall, deep-sky and imaging conditions.
+No separate light-pollution file is required for normal use. Astronomy Observer looks up the observing location in its bundled approximately 3-arcminute World Atlas grid. That estimate already feeds the darkness component, so moving from a city centre to a dark site changes the relevant observing scores as well as the target ranking.
 
-If you have better local information, a real SQM sensor, a fixed SQM value or a higher-resolution local grid can override the bundled estimate.
+It is deliberately described as an estimate: the atlas is a static 2015 planning baseline, not tonight's measured SQM. The Home Assistant edition can use a real SQM sensor, and fixed/custom higher-resolution inputs can override the atlas where supported.
 
-## One engine, two interfaces
+## One observing engine
 
-The Home Assistant and standalone web versions intentionally share the core calculation source rather than maintaining two separate astronomy implementations. The standalone adapter changes the location/setup and public HTTP layer; it does not weaken or expose Home Assistant's Supervisor-token handling, entity publishing or Ingress source-address restriction.
+The project does not maintain separate scoring formulas for each platform. Home Assistant, Docker/web and Android compile the same Rust astronomy/scoring/target modules. Platform adapters deal with location, storage and presentation around that shared engine.
 
-The runtime is a small Rust service with a C astronomy helper. The Home Assistant build is designed for hosts where memory and background CPU use matter, while the standalone Docker image packages the same calculation engine for normal web deployment.
+On Home Assistant and Docker, Astronomy Engine's C implementation runs through a small helper executable. On Android it is linked into the native library and called locally through JNI, so the phone does not need a helper process or remote backend.
+
+## Privacy by design
+
+There is no Astronomy Observer account, analytics endpoint, crash-reporting service or advertising system. Exact location is kept for local astronomical calculations. Coordinates sent to weather providers are rounded according to the shared privacy setting; global comet, satellite and aurora downloads do not include the observer coordinates in their request URLs.
+
+The Android WebView is an embedded local interface rather than a hosted application. Remote pages are blocked inside that privileged WebView; explicit external links open in the normal browser.
+
+See [Privacy and location handling](docs/PRIVACY.md) for the details.
 
 ## Documentation
 
+- [Android standalone APK](docs/ANDROID.md)
 - [Home Assistant installation, configuration and entities](astronomy_observer/DOCS.md)
 - [Standalone Docker and Railway deployment](docs/WEBAPP.md)
 - [Scoring method](docs/SCORING.md)
@@ -103,14 +118,14 @@ The runtime is a small Rust service with a C astronomy helper. The Home Assistan
 - [Development and validation](docs/DEVELOPMENT.md)
 - [Known limits and roadmap](docs/LIMITS_AND_ROADMAP.md)
 
-## Licence
+## Licence and third-party data
 
-Project code is licensed under the **PolyForm Noncommercial License 1.0.0**. It may be used, changed and redistributed for permitted non-commercial purposes. Commercial use of this code or a derivative is not licensed. The intention is straightforward: the project should remain freely usable by amateur astronomers, clubs, education and non-commercial research, rather than becoming the basis of a paid wrapper or service.
+Original Astronomy Observer code is distributed under the **PolyForm Noncommercial License 1.0.0**. It is a source-available non-commercial licence, not an OSI open-source licence.
 
-This is a source-available non-commercial licence, not an OSI open-source licence.
+Bundled and downloaded third-party material keeps its own licence and attribution; it is not silently relicensed as Astronomy Observer code. In particular, the OpenNGC-derived catalogue remains CC BY-SA 4.0, the bundled World Atlas derivative remains CC BY-NC 4.0, and Astronomy Engine remains MIT. The Android app also exposes attribution and licence information from its **About & licences** menu.
 
-Third-party code and data keep their own licences. The bundled World Atlas derivative is separately covered by CC BY-NC 4.0. See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+The project is configured for non-commercial use, which is important for the bundled World Atlas and the free Open-Meteo service. See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) for the complete separation and source links.
 
 ## Release status
 
-`0.2.3` remains marked experimental in Home Assistant. The calculations are deliberately explicit about uncertainty. Estimated seeing is a weather-derived proxy rather than a forecast in arcseconds, recurring meteor-shower dates are a planning aid rather than a substitute for the current IMO calendar, satellite brightness is not inferred from orbital geometry alone, and the bundled light-pollution atlas is a 2015 planning baseline rather than a live sky-quality measurement.
+`0.3.0` remains experimental. The project is intentionally conservative about uncertainty: the seeing value is a weather-derived relative proxy rather than an arcsecond forecast, recurring meteor-shower dates are a planning aid rather than a replacement for the current IMO calendar, satellite brightness is not invented from orbital geometry, and a stale/offline Android snapshot is clearly separated from a current weather forecast.

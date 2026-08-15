@@ -2,9 +2,12 @@ use crate::error::{err, AppResult};
 use crate::models::{AstronomySample, BodyPosition, Location};
 use chrono::{DateTime, TimeZone, Utc};
 use std::collections::{BTreeMap, HashMap};
+#[cfg(not(target_os = "android"))]
 use std::io::Write;
+#[cfg(not(target_os = "android"))]
 use std::process::{Command, Stdio};
 
+#[cfg(not(target_os = "android"))]
 pub fn calculate(location: &Location, times: &[DateTime<Utc>]) -> AppResult<Vec<AstronomySample>> {
     if times.is_empty() {
         return Ok(Vec::new());
@@ -83,6 +86,45 @@ fn parse_output(text: &str) -> AppResult<Vec<AstronomySample>> {
         }
     }
     Ok(map.into_values().collect())
+}
+
+#[cfg(target_os = "android")]
+pub fn calculate(location: &Location, times: &[DateTime<Utc>]) -> AppResult<Vec<AstronomySample>> {
+    use std::ffi::CStr;
+    use std::os::raw::c_char;
+
+    unsafe extern "C" {
+        fn ao_astro_calculate(
+            latitude: f64,
+            longitude: f64,
+            elevation: f64,
+            epochs: *const i64,
+            count: usize,
+        ) -> *mut c_char;
+        fn ao_astro_free(value: *mut c_char);
+    }
+
+    if times.is_empty() {
+        return Ok(Vec::new());
+    }
+    let epochs: Vec<i64> = times.iter().map(|time| time.timestamp()).collect();
+    let value = unsafe {
+        ao_astro_calculate(
+            location.latitude,
+            location.longitude,
+            location.elevation_m,
+            epochs.as_ptr(),
+            epochs.len(),
+        )
+    };
+    if value.is_null() {
+        return Err(err("embedded Astronomy Engine calculation failed"));
+    }
+    let output = unsafe { CStr::from_ptr(value) }
+        .to_string_lossy()
+        .into_owned();
+    unsafe { ao_astro_free(value) };
+    parse_output(&output)
 }
 
 pub fn sample_nearest(samples: &[AstronomySample], t: DateTime<Utc>) -> Option<&AstronomySample> {
