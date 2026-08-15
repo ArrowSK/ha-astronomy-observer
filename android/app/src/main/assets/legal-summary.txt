@@ -14,23 +14,24 @@ https://github.com/mattiaverga/OpenNGC
 https://creativecommons.org/licenses/by-sa/4.0/
 
 World Atlas of Artificial Night Sky Brightness
-The bundled compact light-pollution grid is an adapted derivative of Falchi, F. et al. (2016), The New World Atlas of Artificial Night Sky Brightness, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001. It remains licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). The transformation and dataset notice are included separately in this app.
+The bundled compact light-pollution grid is an adapted derivative of Falchi, F. et al. (2016), The New World Atlas of Artificial Night Sky Brightness, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001. The dataset's version history records the licence change on 13 November 2019 to Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). The derivative remains under that licence. The transformation and dataset notice are included separately in this app.
 https://doi.org/10.5880/GFZ.1.4.2016.001
 https://creativecommons.org/licenses/by-nc/4.0/
 
 Open-Meteo
-When live weather is available, Astronomy Observer requests forecast and air-quality values directly from Open-Meteo. API data are offered under CC BY 4.0. Astronomy Observer rounds the requested location and combines or transforms weather values into derived observing scores; the original provider is shown in Source status.
-Data from Open-Meteo.
+When live weather is available, the Android edition requests forecast and air-quality values directly from Open-Meteo's free non-commercial API. API data are offered under CC BY 4.0. Astronomy Observer rounds the requested location and combines or transforms weather values into derived observing scores. A visible Open-Meteo credit/link is kept beside Source status, and this licence screen records the transformation.
+Data from Open-Meteo; transformed into Astronomy Observer condition scores.
 https://open-meteo.com/
 https://open-meteo.com/en/license
+https://open-meteo.com/en/terms
 https://creativecommons.org/licenses/by/4.0/
 
 MET Norway
-MET Norway Locationforecast is used as an independent weather fallback. Requests identify Astronomy Observer with a project User-Agent and use reduced coordinate precision. Weather values are combined or transformed into derived observing scores; the original provider is shown in Source status.
-Data from MET Norway. Unless a product says otherwise, MET Norway documents its open products under NLOD 2.0 and CC BY 4.0.
+The Home Assistant and Docker/web editions retain MET Norway Locationforecast as their independent fallback. MET Norway documents its open products under NLOD 2.0 and CC BY 4.0 unless a product says otherwise, and requires identification/attribution. The standalone Android edition deliberately does not call Locationforecast directly because MET Norway recommends a proxy for mobile applications except at low volume; a project-operated proxy would conflict with this edition's server-independent design.
+Data from MET Norway (Home Assistant/Docker fallback only).
 https://api.met.no/weatherapi/locationforecast/2.0/documentation
+https://api.met.no/doc/TermsOfService
 https://api.met.no/doc/License
-https://creativecommons.org/licenses/by/4.0/
 
 Other live astronomy sources
 Current visual-satellite elements come directly from CelesTrak, current comet elements from the IAU Minor Planet Center, and aurora data from NOAA Space Weather Prediction Center. These changing datasets are downloaded only when the relevant feature is enabled and cached locally. They are not bundled into the APK.
