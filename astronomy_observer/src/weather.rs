@@ -272,7 +272,9 @@ pub fn fetch(
 
     #[cfg(not(target_os = "android"))]
     {
-        Err(err("weather providers failed and no recent cache is available"))
+        Err(err(
+            "weather providers failed and no recent cache is available",
+        ))
     }
 }
 
