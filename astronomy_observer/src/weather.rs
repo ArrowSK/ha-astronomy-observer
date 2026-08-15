@@ -242,6 +242,7 @@ pub fn fetch(
         }
         Err(e) => eprintln!("Open-Meteo unavailable: {e}"),
     }
+    #[cfg(not(target_os = "android"))]
     match fetch_met_norway(location, precision) {
         Ok(series) => {
             save_cache(&cache, &series);
