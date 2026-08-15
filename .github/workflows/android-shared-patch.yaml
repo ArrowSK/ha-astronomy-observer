@@ -18,7 +18,18 @@ jobs:
           ref: feature/android-standalone
 
       - name: Apply minimal shared-runtime changes
-        run: python3 android/apply_shared_patch.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('android/apply_shared_patch.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              'pub fn sample_nearest(samples: &[AstronomySample], time: DateTime<Utc>) -> Option<&AstronomySample> {',
+              'pub fn sample_nearest(samples: &[AstronomySample], t: DateTime<Utc>) -> Option<&AstronomySample> {',
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+          python3 android/apply_shared_patch.py
 
       - name: Commit shared-runtime changes
         run: |
