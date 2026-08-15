@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import re
-import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 ANDROID = ROOT / "android"
@@ -74,6 +72,10 @@ def main() -> None:
     require("ASTRONOMY_RESOURCE_DIR" in engine, "shared engine does not support packaged Android resources")
     require("ASTRONOMY_RESOURCE_DIR" in light, "light-pollution atlas path is not Android-aware")
     require("offline fallback — no live weather" in weather, "Android offline weather fallback missing")
+    require(
+        '#[cfg(not(target_os = "android"))]\n    match fetch_met_norway' in weather,
+        "Android must not call MET Norway directly without a mobile proxy",
+    )
 
     ha_config = (HA / "config.yaml").read_text(encoding="utf-8")
     require('version: "0.3.0"' in ha_config, "Home Assistant version must match Android release")
@@ -98,6 +100,7 @@ def main() -> None:
         require("Use current location" in html, "generated Android UI lacks device location action")
         require("About &amp; licences" in html, "generated Android UI lacks licence access")
         require("AstronomyAndroid.calculate" in html, "generated Android UI does not call native runtime")
+        require("Weather data by Open-Meteo.com" in html, "Open-Meteo attribution is not visible beside Android source data")
         require("Copy dashboard YAML" in html, "shared dashboard marker unexpectedly disappeared")
 
     print("Android standalone validation passed")
