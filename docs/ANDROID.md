@@ -9,7 +9,7 @@ This is deliberately different from a thin WebView pointed at somebody else's we
 - **Nothing to host.** Home Assistant, Docker, Railway and the project repository are not runtime dependencies.
 - **The same observing brain.** Scores, target ranking, light-pollution handling, comet/satellite logic and the rest of the calculation path come from the same Rust modules as the other editions.
 - **Useful even when the network is poor.** Sun, Moon, planets, geometry, the deep-sky catalogue, horizon checks and the bundled light-pollution atlas are local. Recent downloaded data are cached. If there is no usable weather data, the app says so and lowers confidence instead of pretending the sky is clear.
-- **Location stays local where it can.** Exact coordinates are used on the phone for astronomy. Weather providers receive rounded coordinates, using the same privacy setting as the shared runtime.
+- **Location stays local where it can.** Exact coordinates are used on the phone for astronomy. Open-Meteo receives rounded coordinates for the forecast, using the same privacy setting as the shared runtime.
 
 ## Installing a sideloaded build
 
@@ -37,9 +37,13 @@ The following parts are packaged with the app and calculated locally:
 - telescope/binocular aperture filtering;
 - the observation journal and its search/filter/delete controls.
 
-Fresh forecasts and changing orbital/space-weather datasets naturally require a network connection. The phone talks directly to Open-Meteo or MET Norway for weather, CelesTrak for current visual-satellite elements, the Minor Planet Center for comet elements and NOAA SWPC for aurora data. None of those requests are proxied through infrastructure operated by this project.
+Fresh forecasts and changing orbital/space-weather datasets naturally require a network connection. The Android edition talks directly to Open-Meteo's free non-commercial API for weather, CelesTrak for current visual-satellite elements, the Minor Planet Center for comet elements and NOAA SWPC for aurora data. None of those requests are proxied through infrastructure operated by this project.
 
-Weather is the one input that strongly affects whether *tonight* is actually usable. If both weather providers fail, a recent cache can be used. On Android, if there is no usable cache, the app can still produce a local astronomy planning snapshot with weather fields unknown. Source status shows that state and the confidence calculation is intentionally poor; an offline snapshot must not be read as a clear-sky forecast.
+The Home Assistant/Docker editions keep MET Norway as an independent weather fallback. Android intentionally does not call MET Norway directly: its current API terms recommend a proxy for mobile applications except at low volume, and adding an owner-operated proxy would defeat the purpose of this standalone edition.
+
+Weather is the one input that strongly affects whether *tonight* is actually usable. If Open-Meteo is unavailable, a recent local weather cache can be used. If there is no usable cache either, the app can still produce a local astronomy-planning snapshot with weather fields unknown. Source status shows that state and the confidence calculation is intentionally poor; an offline snapshot must not be read as a clear-sky forecast.
+
+The free Open-Meteo endpoint is explicitly for non-commercial use and has published request limits. Astronomy Observer is non-commercial, refreshes on a modest cadence, caches weather locally and keeps a visible **Weather data by Open-Meteo.com** credit/link beside Source status. Weather values are transformed into the observing scores shown by the app; that transformation is also stated in the licence screen.
 
 ## WebView, but not a website dependency
 
@@ -63,6 +67,8 @@ The Android build downloads two pinned build-time sources: Astronomy Engine C so
 
 Standalone distribution makes attribution particularly important, so the Android app has an **About & licences** item in its hamburger menu. It includes the project licence, the exact upstream Astronomy Engine MIT notice, World Atlas transformation notice, OpenNGC attribution/licence, and weather-provider attribution.
 
-The important separation is intentional: original Astronomy Observer code is PolyForm Noncommercial 1.0.0; the OpenNGC-derived catalogue remains CC BY-SA 4.0; the World Atlas derivative remains CC BY-NC 4.0; Astronomy Engine remains MIT; live weather data retain their provider licences. No third-party material is presented as if the project relicensed it.
+The important separation is intentional: original Astronomy Observer code is PolyForm Noncommercial 1.0.0; the OpenNGC-derived catalogue remains CC BY-SA 4.0; the World Atlas derivative remains CC BY-NC 4.0; Astronomy Engine remains MIT; live Open-Meteo data remain CC BY 4.0. No third-party material is presented as if the project relicensed it.
+
+The World Atlas source itself records that its licence changed to CC BY-NC 4.0 after the embargo period on 13 November 2019. The app keeps the Falchi et al. citation, DOI, derivative description and licence with the distributed dataset.
 
 For the complete source list and links, see [`../THIRD_PARTY_LICENSES.md`](../THIRD_PARTY_LICENSES.md).
