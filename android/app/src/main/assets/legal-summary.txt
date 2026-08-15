@@ -1,0 +1,45 @@
+Astronomy Observer — third-party data and code
+
+Astronomy Observer is a non-commercial project. Original project code is distributed under the PolyForm Noncommercial License 1.0.0. The complete project licence is included separately in this app.
+
+The items below keep their own licences. They are not relicensed under PolyForm.
+
+Astronomy Engine
+Copyright Don Cross. Astronomy Engine v2.1.19, commit 61dc07020aaa6885d2c7f688a4d82beaf6edb9ef, is compiled into the Android native runtime under the MIT License. The full upstream MIT licence notice is included separately in this app.
+https://github.com/cosinekitty/astronomy
+
+OpenNGC
+The observing catalogue is a filtered/adapted build of OpenNGC by Mattia Verga, pinned at commit da90466031b0372c896588b85be6016c617e205b. The generated catalogue remains licensed under Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0); it is not relicensed under the project licence.
+https://github.com/mattiaverga/OpenNGC
+https://creativecommons.org/licenses/by-sa/4.0/
+
+World Atlas of Artificial Night Sky Brightness
+The bundled compact light-pollution grid is an adapted derivative of Falchi, F. et al. (2016), The New World Atlas of Artificial Night Sky Brightness, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001. It remains licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). The transformation and dataset notice are included separately in this app.
+https://doi.org/10.5880/GFZ.1.4.2016.001
+https://creativecommons.org/licenses/by-nc/4.0/
+
+Open-Meteo
+When live weather is available, Astronomy Observer requests forecast and air-quality values directly from Open-Meteo. API data are offered under CC BY 4.0. Astronomy Observer rounds the requested location and combines or transforms weather values into derived observing scores; the original provider is shown in Source status.
+Data from Open-Meteo.
+https://open-meteo.com/
+https://open-meteo.com/en/license
+https://creativecommons.org/licenses/by/4.0/
+
+MET Norway
+MET Norway Locationforecast is used as an independent weather fallback. Requests identify Astronomy Observer with a project User-Agent and use reduced coordinate precision. Weather values are combined or transformed into derived observing scores; the original provider is shown in Source status.
+Data from MET Norway. Unless a product says otherwise, MET Norway documents its open products under NLOD 2.0 and CC BY 4.0.
+https://api.met.no/weatherapi/locationforecast/2.0/documentation
+https://api.met.no/doc/License
+https://creativecommons.org/licenses/by/4.0/
+
+Other live astronomy sources
+Current visual-satellite elements come directly from CelesTrak, current comet elements from the IAU Minor Planet Center, and aurora data from NOAA Space Weather Prediction Center. These changing datasets are downloaded only when the relevant feature is enabled and cached locally. They are not bundled into the APK.
+https://celestrak.org/
+https://www.minorplanetcenter.net/
+https://www.swpc.noaa.gov/products/aurora-30-minute-forecast
+
+Meteor-shower planning data
+The bundled major-shower table is based on recurring information published by the International Meteor Organization. It is a planning aid; the current IMO calendar remains the reference for exact annual circumstances.
+https://www.imo.net/resources/calendar/
+
+No provider listed above endorses Astronomy Observer.
