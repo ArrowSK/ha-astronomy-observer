@@ -249,8 +249,31 @@ pub fn fetch(
         }
         Err(e) => eprintln!("MET Norway unavailable: {e}"),
     }
-    load_cache(&cache)
-        .ok_or_else(|| err("weather providers failed and no recent cache is available"))
+    if let Some(series) = load_cache(&cache) {
+        return Ok(series);
+    }
+
+    #[cfg(target_os = "android")]
+    {
+        let now = Utc::now();
+        let hours = (0..=days * 24)
+            .map(|offset| HourlyWeather {
+                time: now + chrono::Duration::hours(offset as i64),
+                ..Default::default()
+            })
+            .collect();
+        return Ok(WeatherSeries {
+            source: "offline fallback — no live weather".to_string(),
+            retrieved_at: now,
+            stale: true,
+            hours,
+        });
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        Err(err("weather providers failed and no recent cache is available"))
+    }
 }
 
 pub fn nearest(series: &WeatherSeries, time: DateTime<Utc>) -> Option<&HourlyWeather> {

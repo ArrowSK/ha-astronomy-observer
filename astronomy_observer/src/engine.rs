@@ -11,7 +11,7 @@ use crate::{
 use chrono::{DateTime, Duration, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 use std::collections::{BTreeMap, HashMap};
-use std::path::Path;
+use std::path::PathBuf;
 
 fn timeline(now: DateTime<Utc>, days: usize) -> Vec<DateTime<Utc>> {
     let start = Utc
@@ -262,6 +262,13 @@ fn select_recommendations(candidates: Vec<Recommendation>, limit: usize) -> Vec<
     selected
 }
 
+fn resource_path(name: &str) -> PathBuf {
+    std::env::var_os("ASTRONOMY_RESOURCE_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/usr/share/astronomy-observer"))
+        .join(name)
+}
+
 pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     let now = Utc::now();
     let location = ha.location(&cfg.options.primary_person)?;
@@ -319,12 +326,12 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     );
     let best_window_context = window_context(best_window_start, &weather_series, &samples);
 
-    let catalog = Path::new("/usr/share/astronomy-observer/catalog.tsv");
-    let meteor_showers = Path::new("/usr/share/astronomy-observer/meteor_showers.csv");
+    let catalog = resource_path("catalog.tsv");
+    let meteor_showers = resource_path("meteor_showers.csv");
     let mut candidates = Vec::new();
     candidates.extend(targets::deep_sky(
         cfg,
-        catalog,
+        &catalog,
         &weather_series,
         &samples,
         &sky_brightness,
@@ -352,7 +359,7 @@ pub fn refresh(cfg: &AppConfig, ha: &HaClient) -> AppResult<Snapshot> {
     }
     candidates.extend(meteors::recommendations(
         cfg,
-        meteor_showers,
+        &meteor_showers,
         &weather_series,
         &samples,
         &sky_brightness,
