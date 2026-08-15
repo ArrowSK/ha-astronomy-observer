@@ -1,8 +1,38 @@
 # Architecture and resource budget
 
-Astronomy Observer is deliberately small for a continuously running Home Assistant host.
+Astronomy Observer now has three runtime shapes, but deliberately only one observing engine. The Home Assistant app, standalone web service and Android APK compile the same Rust astronomy, weather, scoring, target-ranking and light-pollution modules.
 
-## Runtime layout
+## Shared core, thin platform edges
+
+```text
+                         shared Rust observing core
+               ┌────────────────┼────────────────┐
+               │                │                │
+               ▼                ▼                ▼
+        Home Assistant      Docker / web        Android APK
+        HA location         manual location     GPS/manual location
+        HA entities         HTTP API            JNI bridge
+        Ingress UI          web UI              local WebView UI
+               │                │                │
+               └────────────────┼────────────────┘
+                                │
+                 astronomy / scoring / targets
+                 weather / caches / catalogues
+                 comets / satellites / aurora
+                 World Atlas light pollution
+```
+
+This is intentional. A scoring fix should not have to be copied into an Android implementation and then maintained separately.
+
+## Astronomy Engine
+
+The shared Rust code expects Astronomy Engine results in one compact line-oriented format.
+
+On Home Assistant and Docker, a small C helper process calculates the requested Sun/Moon/planet samples and exits. On Android, spawning that helper would be awkward and unnecessary, so the same pinned Astronomy Engine C implementation is linked into the native Android library. A small FFI adapter returns exactly the format expected by the shared Rust parser.
+
+Astronomy Engine remains under its upstream MIT licence in every edition.
+
+## Home Assistant runtime
 
 ```text
 Home Assistant Core API
@@ -14,29 +44,60 @@ Home Assistant Core API
         ▼
 Astronomy Observer (Rust)
         │
-        ├── weather providers + caches
-        ├── bundled World Atlas light-pollution reader
-        ├── optional local light-pollution grid reader
-        ├── OpenNGC compact catalogue reader
-        ├── comet propagator
-        ├── SGP4 satellite propagator
+        ├── public weather/data providers + caches
+        ├── bundled World Atlas reader
+        ├── optional local light-pollution grid
+        ├── reduced OpenNGC catalogue
+        ├── comet and satellite propagation
         ├── scoring / target ranking
         └── small Ingress HTTP server
         │
         └── astro-helper (C, Astronomy Engine)
 ```
 
-There is no database server, browser runtime, Node service or Python interpreter in the final image. Python is used only during builds to reduce OpenNGC and to create the bundled light-pollution derivative from the official source raster.
+There is no Node service, database server or Python interpreter in the final HA image. Python is build-time tooling only.
 
-## Why Rust plus a C helper
+## Standalone web runtime
 
-The long-running process is Rust because it gives predictable memory use without a managed runtime. Astronomy Engine's C implementation is mature, small and easy to call in one batch: the Rust service sends the required timestamps to `astro-helper`, which returns the Sun/Moon/planet samples and exits.
+The Docker/web edition uses the same Rust modules and static interface but replaces Home Assistant-specific location/entity handling with an ordinary HTTP adapter. Its security boundary is a separate public server mode; the Home Assistant Ingress source-address restriction is not weakened to make the web version possible.
 
-This keeps the astronomy library out of the main process address space between refreshes.
+Railway configuration simply points at this Docker build. Railway is therefore a deployment option, not a separate implementation.
 
-## Memory budget
+## Android runtime
 
-Design targets for a normal Raspberry Pi-class installation are:
+The Android edition is deliberately self-contained:
+
+```text
+bundled WebView UI
+       │
+       ▼
+Java bridge
+       │ JNI
+       ▼
+shared Rust core (.so)
+       │
+       ├── linked Astronomy Engine C code
+       ├── packaged reduced OpenNGC catalogue
+       ├── packaged meteor table
+       ├── packaged World Atlas derivative
+       └── direct public-provider requests + app-local caches
+```
+
+The WebView loads only `file:///android_asset/` content packaged in the APK. Remote network loading is disabled inside that privileged WebView. Explicit external links are handed to the normal Android browser. The Rust layer, not the WebView, performs the documented weather/astronomy-provider requests.
+
+The APK copies large read-only observing assets into its private app files on first start so the shared file readers can use normal filesystem access. It does not contact this GitHub repository at runtime.
+
+## Offline boundary on Android
+
+Local astronomy does not need a network connection: Sun/Moon/planets, target geometry, horizon checks, the reduced deep-sky catalogue, meteor table and World Atlas lookup are packaged with the app.
+
+Weather, current comet elements, current satellite elements and current aurora data are naturally time-sensitive. The phone fetches those directly when possible and reuses recent caches under the same rules as the other editions. If both weather providers fail and Android has no recent weather cache, the Android edition can still calculate a local astronomy-planning snapshot using unknown weather fields. That snapshot is marked stale/low-confidence; it is not presented as a current clear-sky forecast.
+
+The Home Assistant and Docker editions keep their established behavior: without live weather or a sufficiently recent weather cache, a fresh complete snapshot is not published.
+
+## Home Assistant memory budget
+
+Design targets for a normal Raspberry Pi-class HA installation remain:
 
 | State | Target |
 |---|---:|
@@ -45,79 +106,49 @@ Design targets for a normal Raspberry Pi-class installation are:
 | Heavy refresh with moving targets enabled | under 70 MB RSS |
 | Design ceiling | 80 MB RSS |
 
-These are release targets, not a guarantee for every allocator/kernel/build combination. A release should be measured on real Home Assistant hardware before the `experimental` stage is removed.
+These are release targets, not guarantees for every allocator/kernel/build combination.
 
-The architecture avoids the common sources of unnecessary memory use:
+The architecture avoids the usual unnecessary memory costs:
 
 - weather data are only seven days of hourly records;
-- astronomy samples are only 30-minute points for the configured forecast horizon;
-- the approximately 42 MB bundled light-pollution atlas stays on disk;
-- a normal atlas lookup reads one 16-bit cell and the darker-area search keeps one approximately 14 KB row buffer;
-- an optional CSV is streamed line by line;
-- the full OpenNGC database is discarded at build time;
+- astronomy samples are 30-minute points for the configured horizon;
+- the approximately 42 MB World Atlas stays on disk;
+- a normal atlas lookup reads one 16-bit cell and a dark-site search keeps one small row buffer;
+- optional CSV data are streamed;
+- the full OpenNGC source database is reduced at build time;
 - satellite elements are limited to CelesTrak's visual group;
 - no global star catalogue is held in memory;
-- the web interface is static HTML included in the binary.
+- the interface is static HTML rather than a JavaScript server runtime.
 
-The bundled atlas therefore increases installed image/storage size, not the working set by tens of megabytes.
+The atlas therefore mainly increases installed storage size, not working memory by tens of megabytes.
 
-## CPU behaviour
+## Android storage and APK size
 
-Between refreshes the service mostly sleeps and serves the occasional Ingress request. The normal calculation runs every 30 minutes by default.
+Android intentionally trades package size for independence. The World Atlas derivative alone is about 42 MB before APK compression, and the APK also carries the reduced observing catalogue, shared UI and native libraries for `arm64-v8a` and `x86_64`.
 
-The heavier operations are:
+Changing network data are kept in Android's private app storage. Exact observing-site settings and the local observation journal remain there as well; Android backup is disabled for the app.
 
-- deep-sky ranking across the compact catalogue;
-- SGP4 propagation for the visual satellite group;
-- comet propagation for current MPC elements;
-- the bounded nearby darker-area atlas search when enabled.
+## Network behavior
 
-They run as short batches rather than continuous loops. Satellite, comet and aurora features can be disabled independently if a very small host needs less work.
+With the normal refresh cadence:
 
-The direct sky-brightness lookup is effectively a file seek plus a two-byte read. The darker-area search reads only rows that can intersect the configured radius.
+- weather is requested at most once per refresh, plus Open-Meteo air-quality data when applicable;
+- CelesTrak visual elements are normally reused for 12 hours;
+- MPC comet elements are normally reused for 12 hours;
+- NOAA OVATION is checked when enabled;
+- the World Atlas and observing catalogues are local;
+- no runtime downloads are made from this project repository.
 
-## Storage
-
-Persistent `/data` contains only changing network caches, observing notes and timestamps. Typical cache contents are weather JSON, CelesTrak visual elements, MPC comet elements and NOAA OVATION JSON.
-
-The final container includes:
-
-- the Rust binary;
-- the C astronomy helper;
-- the reduced OpenNGC catalogue;
-- the meteor-shower table;
-- the approximately 41.8 MB bundled 3-arcminute World Atlas derivative and its metadata/notice;
-- certificates/base-system files.
-
-It does not contain the multi-gigabyte World Atlas source GeoTIFF or the full OpenNGC source database.
-
-An optional user-supplied light-pollution CSV lives in the separate app configuration folder mounted at `/config`. Its file size affects scan time and storage more than RAM because it is streamed.
-
-## Network budget
-
-With the default 30-minute refresh:
-
-- weather is requested at most once per refresh, plus a separate Open-Meteo air-quality request when the primary provider succeeds;
-- CelesTrak data are normally reused for 12 hours;
-- MPC comet data are normally reused for 12 hours;
-- NOAA OVATION is checked on refresh when enabled;
-- the light-pollution atlas is local and never requires a runtime network request;
-- static catalogues are not downloaded at runtime.
-
-The app uses no paid API and no API key.
+The app uses no paid API and no project-operated backend.
 
 ## Failure boundaries
 
-Each changing source is isolated. A failed satellite download removes satellite recommendations but does not invalidate the weather score. A failed aurora product removes the aurora input. The bundled light-pollution atlas is a static local resource; if the observer is outside its geographic coverage or a cell has no value, sky brightness falls through to unavailable unless a higher-priority SQM/local-grid input exists.
+Changing sources remain isolated. A failed satellite download removes current satellite recommendations rather than invalidating weather. A failed aurora product removes that input. Light pollution remains available from the bundled atlas unless the location is outside coverage or a cell has no value.
 
-Weather is required for a new complete snapshot. If both live weather providers fail, a recent cache can be used. If that cache is too old, the refresh fails rather than publishing a fresh timestamp against stale conditions.
+Unknown inputs stay unknown and reduce confidence rather than being replaced with invented observations.
 
 ## Home Assistant permissions
 
-The app requests:
+The HA edition requests Home Assistant Core API access, Ingress and read-only access to its own app-configuration folder. It does not request privileged mode, host networking, Docker socket access or write access to Home Assistant configuration.
 
-- Home Assistant Core API access;
-- Ingress;
-- read-only access to its own app-configuration folder.
-
-It does not request privileged mode, host networking, Docker socket access or write access to Home Assistant configuration.
+The Android edition requests internet access and optional coarse/fine location. Manual coordinates work without granting location permission.
