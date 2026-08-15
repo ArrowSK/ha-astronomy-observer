@@ -80,6 +80,14 @@ def main() -> None:
         </div>'''
     html = replace_once(html, notes_tail, notes_with_about, "about menu")
 
+    html = replace_once(
+        html,
+        '      <div id="source-list"></div>',
+        '      <div id="source-list"></div>\n'
+        '      <div class="foot"><a href="https://open-meteo.com/" rel="external noreferrer">Weather data by Open-Meteo.com</a> · transformed into Astronomy Observer condition scores.</div>',
+        "Open-Meteo attribution",
+    )
+
     dashboard_marker = '<div class="setup-box" style="grid-column:1/-1">\n        <h3>Dashboard preset</h3>'
     html = replace_once(
         html,
