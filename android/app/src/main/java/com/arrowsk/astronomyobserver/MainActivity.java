@@ -1,6 +1,7 @@
 package com.arrowsk.astronomyobserver;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -13,7 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.webkit.WebChromeClient;
@@ -25,6 +25,7 @@ import android.webkit.WebViewClient;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.window.OnBackInvokedDispatcher;
 
 import org.json.JSONObject;
 
@@ -87,6 +88,12 @@ public final class MainActivity extends Activity {
         bridge = new AndroidBridge(this, webView);
         webView.addJavascriptInterface(bridge, "AstronomyAndroid");
         webView.loadUrl(APP_URL);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    this::handleBackNavigation);
+        }
     }
 
     private void ensureDirectory(File directory) throws IOException {
@@ -338,13 +345,19 @@ public final class MainActivity extends Activity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
+    private void handleBackNavigation() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
-            super.onBackPressed();
+            finish();
         }
+    }
+
+    @SuppressLint("GestureBackNavigation")
+    @SuppressWarnings("deprecation")
+    @Override
+    public void onBackPressed() {
+        handleBackNavigation();
     }
 
     @Override
