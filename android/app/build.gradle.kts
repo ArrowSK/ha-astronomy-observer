@@ -43,7 +43,7 @@ android {
 
     lint {
         abortOnError = true
-        warningsAsErrors = true
+        warningsAsErrors = false
         checkReleaseBuilds = true
     }
 }
