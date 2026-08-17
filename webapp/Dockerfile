@@ -37,6 +37,7 @@ COPY astronomy_observer/data/meteor_showers.csv /usr/share/astronomy-observer/me
 COPY astronomy_observer/data/world_atlas_3min.bin /usr/share/astronomy-observer/world_atlas_3min.bin
 COPY astronomy_observer/data/world_atlas_3min.json /usr/share/astronomy-observer/world_atlas_3min.json
 COPY astronomy_observer/data/WORLD_ATLAS_NOTICE.md /usr/share/astronomy-observer/WORLD_ATLAS_NOTICE.md
+COPY astronomy_observer/data/object_images /usr/share/astronomy-observer/object-images
 RUN chmod 0755 /usr/local/bin/astronomy-observer-web /usr/local/bin/astro-helper \
  && /usr/local/bin/astronomy-observer-web --self-test
 EXPOSE 8080

@@ -96,12 +96,17 @@
     .condition-detail { padding: 2px 12px 13px; color: var(--muted); font-size: 14px; line-height: 1.55; }
     .condition-reference { margin-top: 8px; color: #b8c5da; font-size: 13.5px; line-height: 1.5; }
 
-    .target { display: grid; grid-template-columns: 30px minmax(0, 1fr) 58px; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+    .target { display: grid; grid-template-columns: 30px 58px minmax(0, 1fr) 58px; gap: 10px; align-items: start; padding: 11px 0; border-top: 1px solid var(--line); }
     .target:first-of-type { border-top: 0; padding-top: 0; }
-    .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .rank { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 4px; }
+    .target-thumb-wrap { width: 54px; height: 54px; position: relative; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(145deg, #172238, #0d1422); }
+    .target-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .target-thumb-fallback { color: #7183a1; font-size: 25px; line-height: 1; }
+    .target-credit { position: absolute; right: 2px; bottom: 2px; width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; background: rgba(9,13,22,.84); color: #d8e4f8; border: 1px solid rgba(255,255,255,.28); text-decoration: none; font-size: 12px; font-weight: 700; backdrop-filter: blur(5px); }
+    .target-credit:hover { background: #1a2840; color: var(--accent); }
     .target-name { font-weight: 620; }
     .target-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .target-score { text-align: right; font-size: 19px; font-variant-numeric: tabular-nums; }
+    .target-score { text-align: right; font-size: 19px; font-variant-numeric: tabular-nums; padding-top: 2px; }
     .night { padding: 10px 0; border-top: 1px solid var(--line); }
     .night:first-of-type { border-top: 0; padding-top: 0; }
     .night-head { display: grid; grid-template-columns: 1fr 48px; gap: 8px; }
@@ -172,6 +177,13 @@
       .hero, .conditions, .targets, .outlook { grid-column: 1 / -1; }
       .condition-groups, .note-form, .setup-grid, .history-controls { grid-template-columns: 1fr; }
       .source-row { grid-template-columns: 12px minmax(90px, .6fr) minmax(0, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      .target { grid-template-columns: 24px 48px minmax(0, 1fr) 42px; gap: 8px; }
+      .target-thumb-wrap { width: 46px; height: 46px; border-radius: 8px; }
+      .target-credit { width: 21px; height: 21px; font-size: 11px; }
+      .target-score { font-size: 17px; }
     }
   </style>
 </head>
@@ -479,9 +491,39 @@ function render(snapshot) {
     <div class="condition-group forecast"><div class="condition-group-title">Forecast conditions</div>${forecast}</div>`;
   bindConditionDetails();
 
+  function targetImageKey(r) {
+    const name = String(r.name || '').trim();
+    const category = String(r.category || '').toLowerCase();
+    const messier = name.match(/(?:^|[^A-Za-z])M\s*0*(\d{1,3})(?=\b|\s|\()/i);
+    if (messier) {
+      const number = Number(messier[1]);
+      if (number >= 1 && number <= 110) return `m${String(number).padStart(3, '0')}`;
+    }
+    const lower = name.toLowerCase();
+    const planets = new Set(['mercury','venus','mars','jupiter','saturn','uranus','neptune']);
+    if (category.includes('planet') && planets.has(lower)) return `planet-${lower}`;
+    if (lower === 'moon') return 'moon';
+    if (lower === 'milky way' || lower === 'galactic centre' || lower === 'galactic center') return 'milky-way';
+    const meteors = {
+      'perseids':'meteor-perseids', 'geminids':'meteor-geminids', 'quadrantids':'meteor-quadrantids',
+      'lyrids':'meteor-lyrids', 'eta aquariids':'meteor-eta-aquariids', 'delta aquariids':'meteor-delta-aquariids',
+      'orionids':'meteor-orionids', 'leonids':'meteor-leonids', 'taurids':'meteor-taurids', 'ursids':'meteor-ursids'
+    };
+    if (category.includes('meteor') && meteors[lower]) return meteors[lower];
+    return null;
+  }
+
+  function targetThumbnail(r) {
+    const key = targetImageKey(r);
+    const image = key ? `<img class="target-thumb" src="object-images/${key}.webp" alt="${esc(r.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : '';
+    const credit = key ? `<a class="target-credit" href="object-images/credits.html#${key}" title="Image credit and licence" aria-label="Image credit and licence for ${esc(r.name)}">i</a>` : '';
+    return `<div class="target-thumb-wrap"><span class="target-thumb-fallback" aria-hidden="true">✦</span>${image}${credit}</div>`;
+  }
+
   $('target-list').innerHTML = snapshot.recommendations.length ? snapshot.recommendations.map((r, i) => `
     <div class="target">
       <div class="rank">${i + 1}</div>
+      ${targetThumbnail(r)}
       <div>
         <div class="target-name">${esc(r.name)}</div>
         <div class="target-meta">${esc(r.category)} · ${localTime(r.best_time)} · alt ${n(r.altitude_deg,0,'°')} · az ${n(r.azimuth_deg,0,'°')} · ${esc(r.equipment)}</div>

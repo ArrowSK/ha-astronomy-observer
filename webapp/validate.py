@@ -23,6 +23,8 @@ def main() -> None:
         WEB / "src/ui.rs",
         WEB / "ui/manual.js",
         ROOT / "railway.toml",
+        ROOT / "astronomy_observer/data/object_images/manifest.json",
+        ROOT / "astronomy_observer/data/object_images/m031.webp",
     ]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.exists()]
     require(not missing, f"missing web deployment files: {', '.join(missing)}")

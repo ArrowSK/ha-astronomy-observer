@@ -15,6 +15,7 @@ use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 const INDEX: &str = include_str!("../web/index.html");
 const DASHBOARD: &str = include_str!("../dashboard/astronomy-dashboard.yaml");
+const OBJECT_IMAGE_DIR: &str = "/usr/share/astronomy-observer/object-images";
 const MAX_REQUEST_BODY: usize = 16 * 1024;
 
 #[derive(Debug, Deserialize)]
@@ -100,6 +101,36 @@ fn json_response(value: serde_json::Value, status: u16) -> Response<std::io::Cur
         Response::from_string(value.to_string())
             .with_status_code(StatusCode(status))
             .with_header(header("Content-Type", "application/json; charset=utf-8")),
+    )
+}
+
+fn object_asset_response(name: &str) -> Option<Response<std::io::Cursor<Vec<u8>>>> {
+    if name.is_empty()
+        || name.contains("..")
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+    {
+        return None;
+    }
+    let content_type = if name.ends_with(".webp") {
+        "image/webp"
+    } else if name.ends_with(".html") {
+        "text/html; charset=utf-8"
+    } else if name.ends_with(".json") {
+        "application/json; charset=utf-8"
+    } else if name.ends_with(".txt") {
+        "text/plain; charset=utf-8"
+    } else {
+        return None;
+    };
+    let data = fs::read(Path::new(OBJECT_IMAGE_DIR).join(name)).ok()?;
+    Some(
+        Response::from_data(data)
+            .with_header(header("Content-Type", content_type))
+            .with_header(header("Cache-Control", "public, max-age=604800"))
+            .with_header(header("X-Content-Type-Options", "nosniff"))
+            .with_header(header("Referrer-Policy", "no-referrer")),
     )
 }
 
@@ -428,6 +459,20 @@ pub fn serve(
             match (method, path) {
                 (Method::Get, "/") | (Method::Get, "/index.html") => {
                     let _ = request.respond(html_response(INDEX));
+                }
+                (Method::Get, value) if value.starts_with("/object-images/") => {
+                    let name = value.trim_start_matches("/object-images/");
+                    match object_asset_response(name) {
+                        Some(response) => {
+                            let _ = request.respond(response);
+                        }
+                        None => {
+                            let _ = request.respond(
+                                Response::from_string("not found")
+                                    .with_status_code(StatusCode(404)),
+                            );
+                        }
+                    }
                 }
                 (Method::Get, "/health") => {
                     let ready = snapshot

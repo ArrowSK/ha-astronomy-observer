@@ -40,6 +40,19 @@ DOI: https://doi.org/10.5880/GFZ.1.4.2016.001
 
 Licence: https://creativecommons.org/licenses/by-nc/4.0/
 
+
+## Wikimedia Commons object thumbnails
+
+Astronomy Observer bundles small target thumbnails for the Messier catalogue and a limited set of familiar planets, the Moon, the Milky Way and major meteor showers. The images are selected through the English Wikipedia PageImages API using its `free`-image filter and are then independently checked through the Wikimedia Commons Imageinfo `extmetadata` API before they are accepted.
+
+The builder accepts only files reported as **Public domain, CC0, CC BY, or CC BY-SA**. Fair-use/non-free, NonCommercial, NoDerivatives, GFDL-only and unknown licences are rejected. Each accepted image keeps its own per-file licence and attribution; the image files are not relicensed under Astronomy Observer's PolyForm licence.
+
+The bundled copy is a reduced WebP thumbnail. `astronomy_observer/data/object_images/manifest.json` records the original Commons file, creator, licence, source URL and the thumbnail transformation. `object-images/credits.html` is shipped with Home Assistant, Docker/web and Android so those credits remain accessible from the target image itself.
+
+Wikimedia Commons: https://commons.wikimedia.org/
+
+Wikimedia developer guidance for image licensing: https://foundation.wikimedia.org/wiki/Legal:Wikimedia_Developer_App_Guidelines
+
 ## Open-Meteo
 
 Forecast and air-quality values are requested directly from Open-Meteo. The current free/public service configuration is intended for this project's non-commercial use. Open-Meteo documents API data under Creative Commons Attribution 4.0 International (CC BY 4.0) and requires attribution.

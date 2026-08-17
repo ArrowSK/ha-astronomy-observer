@@ -8,6 +8,7 @@ It combines weather, darkness, Moon interference, local light pollution, observi
 
 - **A useful night plan, not just a cloud percentage.** See the best two-hour window, separate deep-sky/planetary/imaging scores, and the conditions that produced them.
 - **Targets are ranked for your sky and your equipment.** Altitude, local horizon, Moon separation, sky brightness, object type and configured aperture all matter.
+- **Recognisable targets now look recognisable.** Small offline thumbnails are bundled for Messier objects plus familiar planets and major meteor showers; if a target has no licensed image, the list simply falls back to the normal astronomy marker.
 - **Light pollution works out of the box.** A compact World Atlas derivative is bundled, so location already affects darkness-sensitive scoring without asking you to find an SQM map or CSV first.
 - **Run it the way that suits you.** Home Assistant, a completely standalone Android APK, self-hosted Docker, or the same web container on Railway/another container host all use the same observing engine.
 - **No Astronomy Observer account and no paid astronomy API.** The project has no telemetry or advertising service. Changing public data are fetched from their documented sources; core astronomy and the bundled catalogues stay local.
@@ -74,6 +75,7 @@ The current feature set includes:
 - current active-comet candidates from Minor Planet Center elements;
 - visible-satellite passes from CelesTrak elements, with unknown brightness deliberately de-weighted;
 - category-aware Top 10 selection so satellites or comets cannot crowd out the normal observing programme;
+- compact target thumbnails for licensed Wikimedia Commons images, with in-app per-image credit/licence links and no remote image dependency;
 - NOAA OVATION aurora probability;
 - simple lowest-useful-altitude setup plus an optional directional horizon mask;
 - telescope and binocular aperture filtering;
@@ -128,4 +130,4 @@ The project is configured for non-commercial use, which is important for the bun
 
 ## Release status
 
-`0.3.0` remains experimental. The project is intentionally conservative about uncertainty: the seeing value is a weather-derived relative proxy rather than an arcsecond forecast, recurring meteor-shower dates are a planning aid rather than a replacement for the current IMO calendar, satellite brightness is not invented from orbital geometry, and a stale/offline Android snapshot is clearly separated from a current weather forecast.
+`0.3.1` remains experimental. The project is intentionally conservative about uncertainty: the seeing value is a weather-derived relative proxy rather than an arcsecond forecast, recurring meteor-shower dates are a planning aid rather than a replacement for the current IMO calendar, satellite brightness is not invented from orbital geometry, and a stale/offline Android snapshot is clearly separated from a current weather forecast.

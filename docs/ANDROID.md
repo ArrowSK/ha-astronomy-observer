@@ -2,7 +2,7 @@
 
 The Android edition is for people who want Astronomy Observer without running a server at all. Install the APK, choose a location, and the phone does the astronomy work itself.
 
-This is deliberately different from a thin WebView pointed at somebody else's website. The APK contains the interface, the Rust observing engine, Astronomy Engine, the reduced deep-sky catalogue, meteor-shower table and compact World Atlas light-pollution grid. There is no Astronomy Observer account, hosted backend or owner-operated service that has to stay alive for the app to open and calculate.
+This is deliberately different from a thin WebView pointed at somebody else's website. The APK contains the licensed object thumbnails and their per-image credits alongside the other local assets. The APK contains the interface, the Rust observing engine, Astronomy Engine, the reduced deep-sky catalogue, meteor-shower table and compact World Atlas light-pollution grid. There is no Astronomy Observer account, hosted backend or owner-operated service that has to stay alive for the app to open and calculate.
 
 ## Best parts
 

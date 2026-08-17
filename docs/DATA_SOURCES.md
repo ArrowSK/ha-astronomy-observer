@@ -2,6 +2,13 @@
 
 Astronomy Observer keeps each outside source replaceable and cached separately. A failure in a comet or aurora source should not stop the core observing score. Weather is the exception: without weather or a recent weather cache, a complete new observing result cannot be produced.
 
+
+## Target thumbnails
+
+Small target pictures are an offline presentation aid, not an astronomy-data input. A build-time script asks Wikipedia for the representative free image for each Messier object and a short list of familiar Solar-System/meteor targets, then verifies the actual file and its per-file licence through Wikimedia Commons before including it. The runtime never scrapes Wikipedia and does not contact Wikimedia to draw the target list.
+
+Only Public domain, CC0, CC BY and CC BY-SA files are accepted. Per-image creator/source/licence metadata travels with every installation in `object-images/credits.html` and `manifest.json`. Targets without a verified bundled image keep the same ranking and simply show the neutral fallback marker.
+
 ## Source table
 
 | Data | Primary | Fallback | Normal refresh/cache rule |

@@ -18,6 +18,6 @@ gradle -p "$ANDROID_DIR" --no-daemon clean assembleDebug lintDebug
 APK="$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk"
 test -s "$APK"
 mkdir -p "$ANDROID_DIR/generated/apk"
-cp "$APK" "$ANDROID_DIR/generated/apk/astronomy-observer-0.3.0-debug.apk"
+cp "$APK" "$ANDROID_DIR/generated/apk/astronomy-observer-0.3.1-debug.apk"
 
-echo "Installable debug-signed APK: android/generated/apk/astronomy-observer-0.3.0-debug.apk"
+echo "Installable debug-signed APK: android/generated/apk/astronomy-observer-0.3.1-debug.apk"

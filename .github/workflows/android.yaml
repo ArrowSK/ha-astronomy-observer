@@ -72,21 +72,24 @@ jobs:
 
       - name: Inspect APK contents
         run: |
-          APK=android/generated/apk/astronomy-observer-0.3.0-debug.apk
+          APK=android/generated/apk/astronomy-observer-0.3.1-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.arrowsk.astronomyobserver'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "versionName='0.3.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "versionName='0.3.1'"
           unzip -l "$APK" | grep -q 'lib/arm64-v8a/libastronomy_observer_android.so'
           unzip -l "$APK" | grep -q 'lib/x86_64/libastronomy_observer_android.so'
           unzip -l "$APK" | grep -q 'assets/index.html'
           unzip -l "$APK" | grep -q 'assets/world_atlas_3min.bin'
           unzip -l "$APK" | grep -q 'assets/catalog.tsv'
           unzip -l "$APK" | grep -q 'assets/astronomy-engine-license.txt'
+          unzip -l "$APK" | grep -q 'assets/object-images/m031.webp'
+          unzip -l "$APK" | grep -q 'assets/object-images/planet-saturn.webp'
+          unzip -l "$APK" | grep -q 'assets/object-images/credits.html'
 
       - name: Upload installable preview APK
         uses: actions/upload-artifact@v4
         with:
-          name: astronomy-observer-0.3.0-android-debug
-          path: android/generated/apk/astronomy-observer-0.3.0-debug.apk
+          name: astronomy-observer-0.3.1-android-debug
+          path: android/generated/apk/astronomy-observer-0.3.1-debug.apk
           if-no-files-found: error
           retention-days: 30

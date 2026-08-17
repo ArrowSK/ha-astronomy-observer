@@ -13,6 +13,11 @@ The observing catalogue is a filtered/adapted build of OpenNGC by Mattia Verga, 
 https://github.com/mattiaverga/OpenNGC
 https://creativecommons.org/licenses/by-sa/4.0/
 
+Wikimedia Commons object thumbnails
+Small target images for the Messier catalogue and selected familiar observing targets are redistributed from Wikimedia Commons. Each file was accepted only after its per-file licence metadata was checked. The bundle accepts Public domain, CC0, CC BY and CC BY-SA files and rejects fair-use/non-free, NC, ND, GFDL-only and unknown licences. Each image keeps its own licence rather than the Astronomy Observer project licence. The app ships a local object-images/credits.html page containing the creator, exact Commons source, licence link and notice that the distributed copy is a reduced WebP thumbnail.
+https://commons.wikimedia.org/
+https://foundation.wikimedia.org/wiki/Legal:Wikimedia_Developer_App_Guidelines
+
 World Atlas of Artificial Night Sky Brightness
 The bundled compact light-pollution grid is an adapted derivative of Falchi, F. et al. (2016), The New World Atlas of Artificial Night Sky Brightness, GFZ Data Services, DOI 10.5880/GFZ.1.4.2016.001. The dataset's version history records the licence change on 13 November 2019 to Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). The derivative remains under that licence. The transformation and dataset notice are included separately in this app.
 https://doi.org/10.5880/GFZ.1.4.2016.001

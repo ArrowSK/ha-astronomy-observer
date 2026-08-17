@@ -34,8 +34,11 @@ jobs:
       - name: Validate bundled light-pollution atlas
         run: python3 tests/validate_atlas.py
 
+      - name: Validate licensed object thumbnails
+        run: python3 tests/validate_object_images.py
+
       - name: Check Python tools
-        run: python3 -m py_compile astronomy_observer/scripts/build_catalog.py astronomy_observer/scripts/build_global_atlas.py tools/light_pollution_tile.py tests/validate_repository.py tests/validate_atlas.py webapp/validate.py android/validate.py android/prepare_assets.py
+        run: python3 -m py_compile astronomy_observer/scripts/build_catalog.py astronomy_observer/scripts/build_global_atlas.py astronomy_observer/scripts/build_object_thumbnails.py tools/light_pollution_tile.py tests/validate_repository.py tests/validate_atlas.py tests/validate_object_images.py webapp/validate.py android/validate.py android/prepare_assets.py
 
       - name: Validate catalogue builder conversions
         run: python3 astronomy_observer/scripts/build_catalog.py --self-test
@@ -125,6 +128,9 @@ jobs:
           done
           curl --fail --silent http://127.0.0.1:18080/health | grep -qx ok
           curl --fail --silent http://127.0.0.1:18080/ | grep -q 'Astronomy Observer'
+          curl --fail --silent --output /tmp/m31.webp http://127.0.0.1:18080/object-images/m031.webp
+          test -s /tmp/m31.webp
+          curl --fail --silent http://127.0.0.1:18080/object-images/credits.html | grep -q 'Object image credits'
           curl --fail --silent http://127.0.0.1:18080/api/platform | python3 -c 'import json,sys; value=json.load(sys.stdin); assert value["platform"] == "web"; assert value["shared_runtime"] is True; assert value["stateless"] is True'
           status=$(curl --silent --output /tmp/invalid.json --write-out '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"location":{"latitude":999,"longitude":0,"timezone":"UTC"}}' http://127.0.0.1:18080/api/web/snapshot)
           test "$status" = "400"
