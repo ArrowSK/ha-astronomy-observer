@@ -31,7 +31,7 @@ COPY scripts/build_catalog.py ./build_catalog.py
 RUN python3 build_catalog.py NGC.csv addendum.csv catalog.tsv
 
 FROM ghcr.io/home-assistant/base:3.24
-ARG BUILD_VERSION=0.3.0
+ARG BUILD_VERSION=0.3.1
 ARG BUILD_ARCH
 LABEL io.hass.version="${BUILD_VERSION}" \
       io.hass.type="app" \
@@ -49,6 +49,7 @@ COPY data/meteor_showers.csv /usr/share/astronomy-observer/meteor_showers.csv
 COPY data/world_atlas_3min.bin /usr/share/astronomy-observer/world_atlas_3min.bin
 COPY data/world_atlas_3min.json /usr/share/astronomy-observer/world_atlas_3min.json
 COPY data/WORLD_ATLAS_NOTICE.md /usr/share/astronomy-observer/WORLD_ATLAS_NOTICE.md
+COPY data/object_images /usr/share/astronomy-observer/object-images
 COPY run.sh /run.sh
 RUN chmod 0755 /run.sh /usr/local/bin/astronomy-observer /usr/local/bin/astro-helper \
  && /usr/local/bin/astronomy-observer --self-test

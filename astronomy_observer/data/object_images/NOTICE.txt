@@ -1,0 +1,7 @@
+Astronomy Observer object thumbnails
+
+These small target images are redistributed from Wikimedia Commons. Each image keeps its own per-file licence and attribution; none is relicensed under the Astronomy Observer PolyForm licence.
+
+The build accepts only files whose Wikimedia Commons metadata reports Public domain, CC0, CC BY, or CC BY-SA. Fair-use/non-free, NC, ND, GFDL-only, and unknown licences are excluded.
+
+See object-images/credits.html in the application or astronomy_observer/data/object_images/manifest.json in the source tree for per-image creator, source and licence details.

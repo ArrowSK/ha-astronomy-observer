@@ -56,6 +56,35 @@ fn html_response(body: String) -> Response<std::io::Cursor<Vec<u8>>> {
     )
 }
 
+
+fn object_asset_response(name: &str) -> Option<Response<std::io::Cursor<Vec<u8>>>> {
+    if name.is_empty()
+        || name.contains("..")
+        || !name.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+    {
+        return None;
+    }
+    let content_type = if name.ends_with(".webp") {
+        "image/webp"
+    } else if name.ends_with(".html") {
+        "text/html; charset=utf-8"
+    } else if name.ends_with(".json") {
+        "application/json; charset=utf-8"
+    } else if name.ends_with(".txt") {
+        "text/plain; charset=utf-8"
+    } else {
+        return None;
+    };
+    let data = fs::read(Path::new("/usr/share/astronomy-observer/object-images").join(name)).ok()?;
+    Some(
+        Response::from_data(data)
+            .with_header(header("Content-Type", content_type))
+            .with_header(header("Cache-Control", "public, max-age=604800"))
+            .with_header(header("X-Content-Type-Options", "nosniff"))
+            .with_header(header("Referrer-Policy", "no-referrer")),
+    )
+}
+
 fn read_body(request: &mut Request) -> Result<String, String> {
     if request
         .body_length()
@@ -120,6 +149,13 @@ fn handle_request(request: Request, index: &str, temp_root: &Path, config_dir: &
     match (method, path.as_str()) {
         (Method::Get, "/") | (Method::Get, "/index.html") => {
             let _ = request.respond(html_response(index.to_string()));
+        }
+        (Method::Get, value) if value.starts_with("/object-images/") => {
+            let name = value.trim_start_matches("/object-images/");
+            match object_asset_response(name) {
+                Some(response) => { let _ = request.respond(response); }
+                None => { let _ = request.respond(Response::from_string("not found").with_status_code(StatusCode(404))); }
+            }
         }
         (Method::Get, "/health") => {
             let _ = request.respond(Response::from_string("ok").with_status_code(StatusCode(200)));

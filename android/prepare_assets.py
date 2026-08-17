@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 ANDROID = ROOT / "android"
 BASE = ROOT / "astronomy_observer" / "web" / "index.html"
 OUT = ANDROID / "generated" / "assets"
 SCRIPT = ANDROID / "ui" / "android.js"
+OBJECT_IMAGES = ROOT / "astronomy_observer" / "data" / "object_images"
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -102,6 +104,10 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "index.html").write_text(html, encoding="utf-8")
     (OUT / "project-license.txt").write_text((ROOT / "LICENSE").read_text(encoding="utf-8"), encoding="utf-8")
+    image_out = OUT / "object-images"
+    if image_out.exists():
+        shutil.rmtree(image_out)
+    shutil.copytree(OBJECT_IMAGES, image_out)
     print("Android WebView assets prepared from the shared interface")
 
 

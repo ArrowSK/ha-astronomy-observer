@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 - 2026-08-17
+
+- Added small offline target thumbnails for Messier objects plus familiar planets, the Moon, the Milky Way and major meteor showers.
+- Images are selected at build time from Wikimedia's representative free images and then licence-checked against Wikimedia Commons metadata; only Public domain, CC0, CC BY and CC BY-SA files are accepted.
+- Added per-image creator/source/licence credits inside every installation; third-party images remain under their original licences rather than the project PolyForm licence.
+- Targets without a verified bundled image keep the existing ranking/list behaviour and show a neutral fallback marker, so image coverage never changes observing recommendations.
+- Kept the thumbnails fully local in Home Assistant, Docker/web and Android; rendering the target list does not depend on Wikipedia, Wikimedia Commons or an Astronomy Observer server.
+
 ## 0.3.0 - 2026-08-15
 
 - Added a self-contained Android edition that can be sideloaded without Home Assistant or an Astronomy Observer server.
