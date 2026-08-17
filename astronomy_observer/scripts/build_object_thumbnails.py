@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Build a small, redistributable thumbnail set for common observing targets.
 
-The builder intentionally uses Wikimedia's APIs rather than scraping pages. It asks
-English Wikipedia for the representative *free* page image, then verifies that the
-actual file exists on Wikimedia Commons and that its per-file licence is in a small
-allow-list before downloading anything.
+The builder intentionally uses Wikimedia APIs rather than scraping pages. It asks
+English Wikipedia for representative *free* page images in batches, then verifies
+that the actual files exist on Wikimedia Commons and that each per-file licence is
+in a deliberately small allow-list before downloading anything.
 
 The output is a compact set of WebP thumbnails plus machine- and human-readable
 attribution. Third-party images keep their own licences; they are never relicensed
@@ -17,11 +17,12 @@ import html
 import json
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable, TypeVar
 
 from PIL import Image
 
@@ -31,6 +32,8 @@ USER_AGENT = "AstronomyObserverThumbnailBuilder/1.0 (+https://github.com/ArrowSK
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
 THUMB_MAX = 192
+API_BATCH = 40
+T = TypeVar("T")
 
 # Messier coverage is the useful baseline because those identifiers already appear
 # in OpenNGC-derived target names. A small set of familiar Solar-System/meteor
@@ -77,51 +80,115 @@ def clean_html(value: str | None) -> str:
     return re.sub(r"\s+", " ", " ".join(parser.parts)).strip()
 
 
+def chunks(values: list[T], size: int = API_BATCH) -> Iterable[list[T]]:
+    for offset in range(0, len(values), size):
+        yield values[offset : offset + size]
+
+
+def read_url(request: urllib.request.Request, timeout: int) -> bytes:
+    delay = 2.0
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            if error.code not in {429, 500, 502, 503, 504} or attempt == 5:
+                raise
+            retry_after = error.headers.get("Retry-After", "").strip()
+            wait = float(retry_after) if retry_after.isdigit() else delay
+            print(f"Wikimedia returned HTTP {error.code}; retrying in {wait:.0f}s")
+            time.sleep(wait)
+            delay = min(delay * 2, 30.0)
+        except urllib.error.URLError:
+            if attempt == 5:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 30.0)
+    raise RuntimeError("unreachable retry loop")
+
+
 def request_json(url: str, params: dict[str, str]) -> dict[str, Any]:
     query = urllib.parse.urlencode(params)
     request = urllib.request.Request(f"{url}?{query}", headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)
+    return json.loads(read_url(request, 35).decode("utf-8"))
 
 
-def page_image(page_title: str) -> str | None:
-    payload = request_json(
-        WIKIPEDIA_API,
-        {
-            "action": "query",
-            "format": "json",
-            "formatversion": "2",
-            "redirects": "1",
-            "prop": "pageimages",
-            "piprop": "name",
-            "pilicense": "free",
-            "titles": page_title,
-        },
-    )
-    pages = payload.get("query", {}).get("pages", [])
-    if not pages:
-        return None
-    return pages[0].get("pageimage")
+def resolve_title(title: str, aliases: dict[str, str]) -> str:
+    value = title
+    seen: set[str] = set()
+    while value in aliases and value not in seen:
+        seen.add(value)
+        value = aliases[value]
+    return value
 
 
-def commons_info(filename: str) -> dict[str, Any] | None:
-    payload = request_json(
-        COMMONS_API,
-        {
-            "action": "query",
-            "format": "json",
-            "formatversion": "2",
-            "prop": "imageinfo",
-            "iiprop": "url|extmetadata",
-            "iiurlwidth": str(THUMB_MAX),
-            "titles": f"File:{filename}",
-        },
-    )
-    pages = payload.get("query", {}).get("pages", [])
-    if not pages or pages[0].get("missing"):
-        return None
-    info = pages[0].get("imageinfo", [])
-    return info[0] if info else None
+def page_images() -> dict[str, tuple[str, str | None]]:
+    result: dict[str, tuple[str, str | None]] = {}
+    for batch in chunks(TARGETS):
+        requested_titles = [page_title for _, page_title in batch]
+        payload = request_json(
+            WIKIPEDIA_API,
+            {
+                "action": "query",
+                "format": "json",
+                "formatversion": "2",
+                "redirects": "1",
+                "prop": "pageimages",
+                "piprop": "name",
+                "pilicense": "free",
+                "titles": "|".join(requested_titles),
+            },
+        )
+        query = payload.get("query", {})
+        aliases: dict[str, str] = {}
+        for pair in query.get("normalized", []):
+            aliases[pair.get("from", "")] = pair.get("to", "")
+        for pair in query.get("redirects", []):
+            aliases[pair.get("from", "")] = pair.get("to", "")
+        pages = {
+            page.get("title", ""): page
+            for page in query.get("pages", [])
+            if isinstance(page, dict)
+        }
+        for key, page_title in batch:
+            resolved = resolve_title(page_title, aliases)
+            result[key] = (page_title, pages.get(resolved, {}).get("pageimage"))
+        time.sleep(0.8)
+    return result
+
+
+def filename_key(value: str) -> str:
+    return value.replace("_", " ").strip().casefold()
+
+
+def commons_infos(filenames: list[str]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    unique = list(dict.fromkeys(filename for filename in filenames if filename))
+    for batch in chunks(unique):
+        payload = request_json(
+            COMMONS_API,
+            {
+                "action": "query",
+                "format": "json",
+                "formatversion": "2",
+                "prop": "imageinfo",
+                "iiprop": "url|extmetadata",
+                "iiurlwidth": str(THUMB_MAX),
+                "titles": "|".join(f"File:{filename}" for filename in batch),
+            },
+        )
+        for page in payload.get("query", {}).get("pages", []):
+            if not isinstance(page, dict) or page.get("missing"):
+                continue
+            info = page.get("imageinfo", [])
+            if not info:
+                continue
+            page_title = page.get("title", "")
+            if page_title.startswith("File:"):
+                page_title = page_title[5:]
+            result[filename_key(page_title)] = info[0]
+        time.sleep(0.8)
+    return result
 
 
 def metadata_value(metadata: dict[str, Any], key: str) -> str:
@@ -146,8 +213,7 @@ def commons_page(filename: str) -> str:
 
 def download(url: str, path: Path) -> None:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=45) as response:
-        path.write_bytes(response.read())
+    path.write_bytes(read_url(request, 45))
 
 
 def build_thumbnail(source: Path, target: Path) -> tuple[int, int]:
@@ -163,9 +229,15 @@ def credits_html(items: list[dict[str, Any]]) -> str:
     rows = []
     for item in items:
         creator = html.escape(item["creator"] or "See source file page")
-        licence = html.escape(item["license"])
         source = html.escape(item["source_url"], quote=True)
         label = html.escape(item["label"])
+        licence_name = html.escape(item["license"])
+        licence_url = html.escape(item["license_url"], quote=True)
+        licence = (
+            f'<a href="{licence_url}" rel="external noreferrer">{licence_name}</a>'
+            if licence_url
+            else licence_name
+        )
         rows.append(
             f'<article id="{item["key"]}"><h2>{label}</h2>'
             f'<p>{creator} · <a href="{source}" rel="external noreferrer">Wikimedia Commons source</a> · {licence}</p>'
@@ -186,26 +258,33 @@ def main() -> None:
     items: list[dict[str, Any]] = []
     skipped: list[dict[str, str]] = []
 
-    for index, (key, page_title) in enumerate(TARGETS, start=1):
-        try:
-            filename = page_image(page_title)
-            if not filename:
-                skipped.append({"key": key, "page": page_title, "reason": "no free representative page image"})
-                continue
-            info = commons_info(filename)
-            if not info:
-                skipped.append({"key": key, "page": page_title, "reason": "representative image is not on Wikimedia Commons"})
-                continue
-            metadata = info.get("extmetadata", {})
-            licence = metadata_value(metadata, "LicenseShortName")
-            if not allowed_license(licence):
-                skipped.append({"key": key, "page": page_title, "reason": f"licence not allow-listed: {licence or 'unknown'}"})
-                continue
-            thumb_url = info.get("thumburl") or info.get("url")
-            if not thumb_url:
-                skipped.append({"key": key, "page": page_title, "reason": "no downloadable image URL"})
-                continue
+    page_data = page_images()
+    image_info = commons_infos([filename for _, filename in page_data.values() if filename])
 
+    for index, (key, page_title) in enumerate(TARGETS, start=1):
+        filename = page_data.get(key, (page_title, None))[1]
+        if not filename:
+            skipped.append({"key": key, "page": page_title, "reason": "no free representative page image"})
+            print(f"[{index:03d}/{len(TARGETS)}] {key}: no free representative page image")
+            continue
+        info = image_info.get(filename_key(filename))
+        if not info:
+            skipped.append({"key": key, "page": page_title, "reason": "representative image is not available from Wikimedia Commons imageinfo"})
+            print(f"[{index:03d}/{len(TARGETS)}] {key}: Commons metadata unavailable")
+            continue
+
+        metadata = info.get("extmetadata", {})
+        licence = metadata_value(metadata, "LicenseShortName")
+        if not allowed_license(licence):
+            skipped.append({"key": key, "page": page_title, "reason": f"licence not allow-listed: {licence or 'unknown'}"})
+            print(f"[{index:03d}/{len(TARGETS)}] {key}: rejected licence {licence or 'unknown'}")
+            continue
+        thumb_url = info.get("thumburl") or info.get("url")
+        if not thumb_url:
+            skipped.append({"key": key, "page": page_title, "reason": "no downloadable image URL"})
+            continue
+
+        try:
             raw = temporary / f"{key}.source"
             local = OUT / f"{key}.webp"
             download(thumb_url, raw)
@@ -213,7 +292,6 @@ def main() -> None:
             raw.unlink(missing_ok=True)
 
             creator = metadata_value(metadata, "Artist") or metadata_value(metadata, "Credit")
-            licence_url = metadata_value(metadata, "LicenseUrl")
             item = {
                 "key": key,
                 "label": page_title,
@@ -225,16 +303,16 @@ def main() -> None:
                 "creator": creator,
                 "credit": metadata_value(metadata, "Credit"),
                 "license": licence,
-                "license_url": licence_url,
+                "license_url": metadata_value(metadata, "LicenseUrl"),
                 "selection": "English Wikipedia representative page image restricted to free images, then verified on Wikimedia Commons",
                 "transformation": f"scaled/re-encoded WebP thumbnail, maximum {THUMB_MAX}px per side",
             }
             items.append(item)
             print(f"[{index:03d}/{len(TARGETS)}] {key}: {filename} ({licence})")
-        except Exception as error:  # keep one unusual page from aborting the full set
-            skipped.append({"key": key, "page": page_title, "reason": f"builder error: {error}"})
+        except Exception as error:
+            skipped.append({"key": key, "page": page_title, "reason": f"download/thumbnail error: {error}"})
             print(f"[{index:03d}/{len(TARGETS)}] {key}: skipped: {error}")
-        time.sleep(0.08)
+        time.sleep(0.18)
 
     try:
         temporary.rmdir()
@@ -244,7 +322,7 @@ def main() -> None:
     manifest = {
         "format": "Astronomy Observer object thumbnails v1",
         "source": "Wikimedia Commons via English Wikipedia PageImages and Wikimedia Commons Imageinfo APIs",
-        "policy": "Only Public domain, CC0, CC BY, and CC BY-SA images are accepted; fair-use/non-free/NC/ND/unknown files are excluded.",
+        "policy": "Only Public domain, CC0, CC BY, and CC BY-SA images are accepted; fair-use/non-free/NC/ND/GFDL-only/unknown files are excluded.",
         "thumbnail_max_px": THUMB_MAX,
         "items": items,
         "skipped": skipped,
@@ -261,8 +339,9 @@ def main() -> None:
     print(f"Wrote {len(items)} licensed thumbnails; skipped {len(skipped)} targets")
     if len(items) < 80:
         raise SystemExit("Too few licensed thumbnails were produced; refusing to publish an unexpectedly sparse set")
-    if not (OUT / "m031.webp").is_file():
-        raise SystemExit("M31 thumbnail is required as a packaging smoke-test asset")
+    for required in ("m031.webp", "planet-saturn.webp"):
+        if not (OUT / required).is_file():
+            raise SystemExit(f"Required packaging smoke-test asset is missing: {required}")
 
 
 if __name__ == "__main__":
