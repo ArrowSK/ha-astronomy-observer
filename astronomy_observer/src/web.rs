@@ -104,11 +104,12 @@ fn json_response(value: serde_json::Value, status: u16) -> Response<std::io::Cur
     )
 }
 
-
 fn object_asset_response(name: &str) -> Option<Response<std::io::Cursor<Vec<u8>>>> {
     if name.is_empty()
         || name.contains("..")
-        || !name.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
     {
         return None;
     }
@@ -462,8 +463,15 @@ pub fn serve(
                 (Method::Get, value) if value.starts_with("/object-images/") => {
                     let name = value.trim_start_matches("/object-images/");
                     match object_asset_response(name) {
-                        Some(response) => { let _ = request.respond(response); }
-                        None => { let _ = request.respond(Response::from_string("not found").with_status_code(StatusCode(404))); }
+                        Some(response) => {
+                            let _ = request.respond(response);
+                        }
+                        None => {
+                            let _ = request.respond(
+                                Response::from_string("not found")
+                                    .with_status_code(StatusCode(404)),
+                            );
+                        }
                     }
                 }
                 (Method::Get, "/health") => {
