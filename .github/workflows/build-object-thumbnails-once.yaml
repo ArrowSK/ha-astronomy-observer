@@ -43,13 +43,16 @@ jobs:
 
       - name: Commit generated bundle and feature changes
         run: |
+          # Workflow-file edits are deliberately not staged here: GitHub's
+          # ephemeral Actions token may update normal repository content but
+          # cannot rewrite workflow files. Those small CI edits are committed
+          # separately through the repository maintenance connection.
           git add astronomy_observer/data/object_images \
             astronomy_observer/web/index.html \
             astronomy_observer/src/web.rs \
             webapp/src/server.rs \
             astronomy_observer/Dockerfile webapp/Dockerfile \
             android/prepare_assets.py android/app/build.gradle.kts android/validate.py \
-            .github/workflows/android.yaml .github/workflows/ci.yaml \
             astronomy_observer/config.yaml webapp/validate.py \
             README.md THIRD_PARTY_LICENSES.md docs/DATA_SOURCES.md docs/ANDROID.md \
             CHANGELOG.md astronomy_observer/CHANGELOG.md
