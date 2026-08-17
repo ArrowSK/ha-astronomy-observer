@@ -301,7 +301,6 @@ def main() -> None:
                 "source_file": filename,
                 "source_url": commons_page(filename),
                 "creator": creator,
-                "credit": metadata_value(metadata, "Credit"),
                 "license": licence,
                 "license_url": metadata_value(metadata, "LicenseUrl"),
                 "selection": "English Wikipedia representative page image restricted to free images, then verified on Wikimedia Commons",
