@@ -160,4 +160,4 @@ jobs:
           git commit -m "Fix embedded image-credit navigation"
           git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
 
-# Trigger this temporary workflow on the hotfix PR; remove it after merge.
+# Retry after pre-aligning the Android workflow version so the bot does not need workflow-write permission.
