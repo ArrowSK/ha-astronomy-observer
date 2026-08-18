@@ -159,3 +159,5 @@ jobs:
             astronomy_observer/README.md
           git commit -m "Fix embedded image-credit navigation"
           git push origin HEAD:main
+
+# Merge-trigger marker. Remove this temporary workflow after the hotfix lands.
