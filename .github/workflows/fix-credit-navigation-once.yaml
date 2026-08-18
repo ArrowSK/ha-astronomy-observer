@@ -1,3 +1,4 @@
+# Second push intentionally triggers this one-time workflow after it exists on main.
 name: Fix credit navigation once
 
 on:
@@ -90,7 +91,6 @@ jobs:
               text = text.replace(marker, addition, 1)
               validator.write_text(text, encoding='utf-8')
 
-          # Patch-release bump so Home Assistant actually offers the navigation fix.
           replace('astronomy_observer/config.yaml', 'version: "0.3.1"', 'version: "0.3.2"', count=1)
           replace('astronomy_observer/Dockerfile', 'ARG BUILD_VERSION=0.3.1', 'ARG BUILD_VERSION=0.3.2', count=1)
           replace('android/app/build.gradle.kts', 'versionCode = 30100', 'versionCode = 30200', count=1)
