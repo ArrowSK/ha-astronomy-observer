@@ -159,3 +159,5 @@ jobs:
             astronomy_observer/README.md
           git commit -m "Fix embedded image-credit navigation"
           git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
+
+# Trigger this temporary workflow on the hotfix PR; remove it after merge.
