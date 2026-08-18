@@ -35,7 +35,7 @@
 ---
 
 <p align="center">
-  <img src="docs/images/astronomy-observer-overview.jpg" width="1200" alt="Astronomy Observer overview showing observing window, conditions, targets and forecast">
+  <img src="docs/images/astronomy-observer-overview.jpg" width="650" alt="Astronomy Observer overview showing observing window, conditions, targets and forecast">
 </p>
 
 ## What it gives you
