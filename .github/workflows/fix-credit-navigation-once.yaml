@@ -1,4 +1,4 @@
-# Second push intentionally triggers this one-time workflow after it exists on main.
+# Temporary one-time workflow. A small merged README trigger will run it, then this file is removed.
 name: Fix credit navigation once
 
 on:
@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - ".github/workflows/fix-credit-navigation-once.yaml"
+      - "README.md"
 
 permissions:
   contents: write
@@ -27,8 +28,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          ROOT = Path('.')
-
           def write(path, text):
               Path(path).write_text(text, encoding='utf-8')
 
@@ -39,10 +38,7 @@ jobs:
                   return
               if old not in text:
                   raise SystemExit(f'Expected marker not found in {path}: {old[:100]!r}')
-              if count is None:
-                  text = text.replace(old, new)
-              else:
-                  text = text.replace(old, new, count)
+              text = text.replace(old, new) if count is None else text.replace(old, new, count)
               write(p, text)
 
           head_old = '<title>Object image credits · Astronomy Observer</title><style>'
@@ -58,8 +54,7 @@ jobs:
               '.return-bar a:hover{border-color:#4d607f;background:#1a2840}.return-bar span{color:#9eabc1;font-size:13px}'
               'main{padding-top:calc(96px + env(safe-area-inset-top))}'
               'article{scroll-margin-top:calc(92px + env(safe-area-inset-top))}'
-              '@media(max-width:520px){.return-bar span{display:none}}'
-              '</style></head>'
+              '@media(max-width:520px){.return-bar span{display:none}}'</n              '</style></head>'
           )
           body_old = '<body><main><h1>Object image credits</h1>'
           body_new = (
@@ -134,7 +129,6 @@ jobs:
                   raise SystemExit('HA README navigation marker missing')
               text = text.replace(old, new, 1)
           ha_readme.write_text(text, encoding='utf-8')
-
           print('Credit navigation hotfix prepared')
           PY
 
