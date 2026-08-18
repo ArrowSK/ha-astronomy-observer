@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2 - 2026-08-18
+
+- Added an always-visible **Back to Astronomy Observer** control to object-image credits, including deep-linked entries opened inside Home Assistant Ingress.
+- Wikimedia source and licence links now open separately instead of replacing the embedded Astronomy Observer view.
+- Kept all target images, image licences, target ranking, scoring and observing behaviour unchanged.
+
 ## 0.3.1 - 2026-08-17
 
 - Added small offline target thumbnails for Messier objects plus familiar planets, the Moon, the Milky Way and major meteor showers.

@@ -1,6 +1,6 @@
 name: Astronomy Observer
 description: Observing conditions and target recommendations for amateur astronomy
-version: "0.3.1"
+version: "0.3.2"
 slug: astronomy_observer
 url: https://github.com/ArrowSK/ha-astronomy-observer
 image: ghcr.io/arrowsk/ha-astronomy-observer

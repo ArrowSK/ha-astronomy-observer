@@ -35,6 +35,8 @@ def main() -> None:
 
     credits = (IMAGES / "credits.html").read_text(encoding="utf-8")
     notice = (IMAGES / "NOTICE.txt").read_text(encoding="utf-8")
+    for navigation_marker in ['<base target="_blank">', "Back to Astronomy Observer", 'target="_self"', "../#targets"]:
+        require(navigation_marker in credits, f"credit-page navigation marker missing: {navigation_marker}")
     for marker in ["Wikimedia Commons", "not relicensed", "CC BY", "Public domain"]:
         require(marker in credits + notice + MANIFEST.read_text(encoding="utf-8"), f"thumbnail attribution marker missing: {marker}")
 

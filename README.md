@@ -54,7 +54,7 @@ Astronomy Observer is built for the question an ordinary weather app does not re
 
 No Astronomy Observer account is required. There is no project telemetry service, analytics SDK, advertising service, paid astronomy API requirement or project-operated cloud backend. Changing public data are fetched from their documented providers; core astronomy, catalogues, scoring and bundled light-pollution data stay with the installed application.
 
-> **Current release: 0.3.1.** Astronomy Observer is still marked experimental, but the same core is now exercised through Home Assistant, standalone Docker/web and a fully standalone Android build.
+> **Current release: 0.3.2.** Astronomy Observer is still marked experimental, but the same core is now exercised through Home Assistant, standalone Docker/web and a fully standalone Android build.
 
 ## Choose how to run it
 
@@ -139,7 +139,7 @@ Depending on source availability, the current planner can use:
 - visible-satellite passes from CelesTrak elements;
 - NOAA OVATION aurora probability.
 
-The scoring model is deterministic. No LLM, remote scoring service or news-sentiment model sits in the decision path.
+The scoring model is deterministic and does not depend on a remote scoring or news-sentiment service.
 
 ## Recognisable targets, without a remote image service
 
@@ -147,7 +147,7 @@ Astronomy Observer bundles compact target thumbnails for the Messier catalogue p
 
 The image set is intentionally conservative. The builder first requests a representative free image and then verifies the corresponding Wikimedia Commons licence metadata. Only Public Domain, CC0, CC BY and CC BY-SA files are accepted. Fair-use/non-free, NonCommercial, NoDerivatives, GFDL-only and unknown licences are rejected.
 
-Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.
+Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. The credits page includes a clear return control in embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.
 
 [Object-image licence details →](THIRD_PARTY_LICENSES.md#wikimedia-commons-object-thumbnails)
 
