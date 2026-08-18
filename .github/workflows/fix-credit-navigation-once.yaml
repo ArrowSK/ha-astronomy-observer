@@ -1,10 +1,9 @@
 name: Fix credit navigation once
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
-      - "README.md"
       - ".github/workflows/fix-credit-navigation-once.yaml"
 
 permissions:
@@ -19,6 +18,7 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Apply navigation fix and release bump
         shell: bash
@@ -135,7 +135,7 @@ jobs:
           python3 android/validate.py
           git diff --check
 
-      - name: Commit hotfix to main
+      - name: Commit hotfix to topic branch
         shell: bash
         run: |
           if git diff --quiet; then
@@ -158,6 +158,4 @@ jobs:
             README.md \
             astronomy_observer/README.md
           git commit -m "Fix embedded image-credit navigation"
-          git push origin HEAD:main
-
-# Merge-trigger marker. Remove this temporary workflow after the hotfix lands.
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
