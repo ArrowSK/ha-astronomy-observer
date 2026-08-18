@@ -1,13 +1,11 @@
-# Temporary one-time workflow. A small merged README trigger will run it, then this file is removed.
 name: Fix credit navigation once
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - ".github/workflows/fix-credit-navigation-once.yaml"
       - "README.md"
+      - ".github/workflows/fix-credit-navigation-once.yaml"
 
 permissions:
   contents: write
@@ -28,18 +26,14 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          def write(path, text):
-              Path(path).write_text(text, encoding='utf-8')
-
-          def replace(path, old, new, *, count=None):
+          def replace(path, old, new, count=1):
               p = Path(path)
-              text = p.read_text(encoding='utf-8')
-              if new in text and old not in text:
+              text = p.read_text(encoding="utf-8")
+              if new in text:
                   return
               if old not in text:
-                  raise SystemExit(f'Expected marker not found in {path}: {old[:100]!r}')
-              text = text.replace(old, new) if count is None else text.replace(old, new, count)
-              write(p, text)
+                  raise SystemExit(f"marker missing in {path}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, count), encoding="utf-8")
 
           head_old = '<title>Object image credits · Astronomy Observer</title><style>'
           head_new = '<title>Object image credits · Astronomy Observer</title><base target="_blank"><style>'
@@ -54,7 +48,8 @@ jobs:
               '.return-bar a:hover{border-color:#4d607f;background:#1a2840}.return-bar span{color:#9eabc1;font-size:13px}'
               'main{padding-top:calc(96px + env(safe-area-inset-top))}'
               'article{scroll-margin-top:calc(92px + env(safe-area-inset-top))}'
-              '@media(max-width:520px){.return-bar span{display:none}}'</n              '</style></head>'
+              '@media(max-width:520px){.return-bar span{display:none}}'
+              '</style></head>'
           )
           body_old = '<body><main><h1>Object image credits</h1>'
           body_new = (
@@ -64,53 +59,53 @@ jobs:
               '<span>Image credits and licences</span></nav><main><h1>Object image credits</h1>'
           )
 
-          for path in [
+          for path in (
               'astronomy_observer/data/object_images/credits.html',
               'astronomy_observer/scripts/build_object_thumbnails.py',
-          ]:
-              replace(path, head_old, head_new, count=1)
-              replace(path, style_old, style_new, count=1)
-              replace(path, body_old, body_new, count=1)
+          ):
+              replace(path, head_old, head_new)
+              replace(path, style_old, style_new)
+              replace(path, body_old, body_new)
 
-          validator = Path('tests/validate_object_images.py')
-          text = validator.read_text(encoding='utf-8')
+          p = Path('tests/validate_object_images.py')
+          text = p.read_text(encoding='utf-8')
           marker = '    notice = (IMAGES / "NOTICE.txt").read_text(encoding="utf-8")\n'
-          addition = (
-              marker
-              + '    for navigation_marker in [\'<base target="_blank">\', "Back to Astronomy Observer", \'target="_self"\', "../#targets"]:\n'
-              + '        require(navigation_marker in credits, f"credit-page navigation marker missing: {navigation_marker}")\n'
+          check = (
+              '    for navigation_marker in [\'<base target="_blank">\', "Back to Astronomy Observer", '
+              '\'target="_self"\', "../#targets"]:\n'
+              '        require(navigation_marker in credits, f"credit-page navigation marker missing: {navigation_marker}")\n'
           )
           if 'credit-page navigation marker missing' not in text:
               if marker not in text:
-                  raise SystemExit('Object-image validator insertion marker missing')
-              text = text.replace(marker, addition, 1)
-              validator.write_text(text, encoding='utf-8')
+                  raise SystemExit('validator insertion marker missing')
+              p.write_text(text.replace(marker, marker + check, 1), encoding='utf-8')
 
-          replace('astronomy_observer/config.yaml', 'version: "0.3.1"', 'version: "0.3.2"', count=1)
-          replace('astronomy_observer/Dockerfile', 'ARG BUILD_VERSION=0.3.1', 'ARG BUILD_VERSION=0.3.2', count=1)
-          replace('android/app/build.gradle.kts', 'versionCode = 30100', 'versionCode = 30200', count=1)
-          replace('android/app/build.gradle.kts', 'versionName = "0.3.1"', 'versionName = "0.3.2"', count=1)
-          for path in ['android/validate.py', 'android/build-apk.sh', '.github/workflows/android.yaml']:
+          replace('astronomy_observer/config.yaml', 'version: "0.3.1"', 'version: "0.3.2"')
+          replace('astronomy_observer/Dockerfile', 'ARG BUILD_VERSION=0.3.1', 'ARG BUILD_VERSION=0.3.2')
+          replace('android/app/build.gradle.kts', 'versionCode = 30100', 'versionCode = 30200')
+          replace('android/app/build.gradle.kts', 'versionName = "0.3.1"', 'versionName = "0.3.2"')
+          for path in ('android/validate.py', 'android/build-apk.sh', '.github/workflows/android.yaml'):
               p = Path(path)
               text = p.read_text(encoding='utf-8')
-              if '0.3.1' not in text:
-                  raise SystemExit(f'Expected 0.3.1 release marker missing from {path}')
-              p.write_text(text.replace('0.3.1', '0.3.2'), encoding='utf-8')
+              if '0.3.2' not in text:
+                  if '0.3.1' not in text:
+                      raise SystemExit(f'release marker missing in {path}')
+                  p.write_text(text.replace('0.3.1', '0.3.2'), encoding='utf-8')
 
-          changelog = Path('astronomy_observer/CHANGELOG.md')
-          text = changelog.read_text(encoding='utf-8')
-          release = '''# Changelog\n\n## 0.3.2 - 2026-08-18\n\n- Added an always-visible **Back to Astronomy Observer** control to the bundled object-image credits page, so Home Assistant Ingress, Android and standalone web users are never left on a dead-end attribution page.\n- Credit-page source and licence links now open separately instead of replacing the embedded Astronomy Observer view.\n- Kept all target images, image licences, target ranking, scoring and observing behaviour unchanged.\n\n'''
+          p = Path('astronomy_observer/CHANGELOG.md')
+          text = p.read_text(encoding='utf-8')
           if '## 0.3.2 - 2026-08-18' not in text:
+              entry = '''# Changelog\n\n## 0.3.2 - 2026-08-18\n\n- Added an always-visible **Back to Astronomy Observer** control to object-image credits, including deep-linked entries opened inside Home Assistant Ingress.\n- Wikimedia source and licence links now open separately instead of replacing the embedded Astronomy Observer view.\n- Kept all target images, image licences, target ranking, scoring and observing behaviour unchanged.\n\n'''
               if not text.startswith('# Changelog\n\n'):
-                  raise SystemExit('Unexpected changelog header')
-              changelog.write_text(release + text[len('# Changelog\n\n'):], encoding='utf-8')
+                  raise SystemExit('unexpected changelog header')
+              p.write_text(entry + text[len('# Changelog\n\n'):], encoding='utf-8')
 
-          readme = Path('README.md')
-          text = readme.read_text(encoding='utf-8')
+          p = Path('README.md')
+          text = p.read_text(encoding='utf-8')
           text = text.replace('> **Current release: 0.3.1.**', '> **Current release: 0.3.2.**', 1)
           text = text.replace(
               'Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.',
-              'Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. The credits page has its own return control for embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.',
+              'Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. The credits page includes a clear return control in embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.',
               1,
           )
           text = text.replace(
@@ -118,18 +113,18 @@ jobs:
               'The scoring model is deterministic and does not depend on a remote scoring or news-sentiment service.',
               1,
           )
-          readme.write_text(text, encoding='utf-8')
+          p.write_text(text, encoding='utf-8')
 
-          ha_readme = Path('astronomy_observer/README.md')
-          text = ha_readme.read_text(encoding='utf-8')
+          p = Path('astronomy_observer/README.md')
+          text = p.read_text(encoding='utf-8')
           old = 'The header keeps the refresh icon directly available and places **Setup** and the **Observation journal** in a hamburger menu with generous touch spacing.'
-          new = 'The header keeps the refresh icon directly available and places **Setup** and the **Observation journal** in a hamburger menu with generous touch spacing. Bundled object-image credits include a visible return control, and attribution links open separately so the Home Assistant Ingress view is not replaced.'
+          new = old + ' Object-image credits include a visible return control, and external attribution links do not replace the Ingress view.'
           if new not in text:
               if old not in text:
-                  raise SystemExit('HA README navigation marker missing')
-              text = text.replace(old, new, 1)
-          ha_readme.write_text(text, encoding='utf-8')
-          print('Credit navigation hotfix prepared')
+                  raise SystemExit('HA README marker missing')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          print('credit navigation patch prepared')
           PY
 
       - name: Validate patched repository
@@ -138,12 +133,7 @@ jobs:
           python3 tests/validate_repository.py
           python3 webapp/validate.py
           python3 android/validate.py
-
-      - name: Verify only intended release/navigation files changed
-        run: |
           git diff --check
-          git status --short
-          git diff --name-only | sort
 
       - name: Commit hotfix to main
         shell: bash
