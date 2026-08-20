@@ -1,6 +1,8 @@
 name: One-time image usability v0.3.3
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -16,6 +18,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Apply image usability refinements
         run: |
@@ -169,14 +172,11 @@ jobs:
           grep -q 'aria-label="Back to Astronomy Observer"' astronomy_observer/data/object_images/credits.html
           ! grep -q '>← Back to Astronomy Observer</a>' astronomy_observer/data/object_images/credits.html
 
-      - name: Commit directly to main and remove this workflow
+      - name: Commit changes to the PR branch and remove this workflow
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/one-time-image-usability-v033.yaml
           git add README.md astronomy_observer android tests .github/workflows/android.yaml
           git commit -m "Improve image viewing and credits"
-          git push origin HEAD:main
-
-# trigger
-# merge-trigger
+          git push origin HEAD:"${GITHUB_HEAD_REF:-main}"
