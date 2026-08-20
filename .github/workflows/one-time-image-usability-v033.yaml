@@ -129,7 +129,6 @@ jobs:
               'astronomy_observer/Dockerfile',
               'android/app/build.gradle.kts',
               'android/build-apk.sh',
-              '.github/workflows/android.yaml',
           ]
           for path in version_files:
               p = root / path
@@ -177,6 +176,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/one-time-image-usability-v033.yaml
-          git add README.md astronomy_observer android tests .github/workflows/android.yaml
+          git add README.md astronomy_observer android tests
           git commit -m "Improve image viewing and credits"
           git push origin HEAD:"${GITHUB_HEAD_REF:-main}"
