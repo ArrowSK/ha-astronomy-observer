@@ -111,7 +111,7 @@
     .image-lightbox[hidden] { display: none; }
     .image-lightbox { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.94); }
     .image-lightbox-panel { position: relative; width: min(920px, 94vw); max-height: 92vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .image-lightbox-image { max-width: 100%; max-height: calc(92vh - 68px); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }
+    .image-lightbox-image { width: min(720px, 92vw); height: auto; max-width: 100%; max-height: calc(92vh - 68px); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }
     .image-lightbox-caption { color: #c7d3e7; font-size: 14px; text-align: center; }
     .image-lightbox-close { position: absolute; z-index: 2; top: -12px; right: -12px; width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #152138; border-color: #526480; font-size: 28px; line-height: 1; }
     .image-lightbox-close:hover { background: #1b2b47; }
