@@ -109,10 +109,12 @@
     .target-credit:hover { background: #1a2840; color: var(--accent); }
     body.image-lightbox-open { overflow: hidden; }
     .image-lightbox[hidden] { display: none; }
-    .image-lightbox { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.94); }
-    .image-lightbox-panel { position: relative; width: min(920px, 94vw); max-height: 92vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .image-lightbox-image { width: min(720px, 92vw); height: auto; max-width: 100%; max-height: calc(92vh - 68px); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }
+    .image-lightbox { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(3,6,12,.94); }
+    .image-lightbox-panel { position: relative; width: min(920px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .image-lightbox-image { width: min(820px, 100%); height: auto; max-width: 100%; max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }
     .image-lightbox-caption { color: #c7d3e7; font-size: 14px; text-align: center; }
+    .image-lightbox-credit { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px; text-decoration: none; min-height: 32px; padding: 4px 8px; border-radius: 8px; }
+    .image-lightbox-credit:hover { background: rgba(158,197,255,.08); text-decoration: underline; }
     .image-lightbox-close { position: absolute; z-index: 2; top: -12px; right: -12px; width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #152138; border-color: #526480; font-size: 28px; line-height: 1; }
     .image-lightbox-close:hover { background: #1b2b47; }
     .target-name { font-weight: 620; }
@@ -195,10 +197,10 @@
       .target-media { width: 46px; }
       .target-thumb-wrap { width: 46px; height: 46px; border-radius: 8px; }
       .target-credit { width: 24px; height: 24px; font-size: 11px; }
-      .image-lightbox { padding: 14px; }
-      .image-lightbox-panel { width: 100%; }
+      .image-lightbox { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+      .image-lightbox-panel { width: 100%; max-height: calc(100dvh - 20px); }
       .image-lightbox-close { top: 4px; right: 4px; }
-      .image-lightbox-image { max-height: calc(100vh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+      .image-lightbox-image { width: 100%; max-height: calc(100dvh - 138px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
       .target-score { font-size: 17px; }
     }
   </style>
@@ -373,6 +375,7 @@
     <button id="image-lightbox-close" class="image-lightbox-close" type="button" aria-label="Close expanded image" title="Close">×</button>
     <img id="image-lightbox-image" class="image-lightbox-image" alt="">
     <div id="image-lightbox-caption" class="image-lightbox-caption"></div>
+    <a id="image-lightbox-credit" class="image-lightbox-credit" href="#" aria-label="Open image credit and licence">ⓘ <span>Image credit &amp; licence</span></a>
   </div>
 </div>
 <nav id="bottom-nav" class="bottom-nav" aria-label="Astronomy Observer sections">
@@ -542,7 +545,7 @@ function render(snapshot) {
     const imagePath = `object-images/${key}.webp`;
     const image = `<img class="target-thumb" src="${imagePath}" alt="${esc(r.name)}" loading="lazy" decoding="async" onerror="this.remove()">`;
     const credit = `<a class="target-credit" href="object-images/credits.html#${key}" title="Image credit and licence" aria-label="Image credit and licence for ${esc(r.name)}">i</a>`;
-    return `<div class="target-media"><button class="target-thumb-wrap target-thumb-button" type="button" data-target-image="${imagePath}" data-target-name="${esc(r.name)}" aria-label="Expand image of ${esc(r.name)}"><span class="target-thumb-fallback" aria-hidden="true">✦</span>${image}</button>${credit}</div>`;
+    return `<div class="target-media"><button class="target-thumb-wrap target-thumb-button" type="button" data-target-image="${imagePath}" data-target-name="${esc(r.name)}" data-target-credit="object-images/credits.html#${key}" aria-label="Expand image of ${esc(r.name)}"><span class="target-thumb-fallback" aria-hidden="true">✦</span>${image}</button>${credit}</div>`;
   }
 
   $('target-list').innerHTML = snapshot.recommendations.length ? snapshot.recommendations.map((r, i) => `
@@ -759,6 +762,9 @@ function openTargetImage(button) {
   $('image-lightbox-image').src = src;
   $('image-lightbox-image').alt = button.dataset.targetName || 'Astronomy target';
   $('image-lightbox-caption').textContent = button.dataset.targetName || '';
+  const credit = button.dataset.targetCredit || '#';
+  $('image-lightbox-credit').href = credit;
+  $('image-lightbox-credit').hidden = !button.dataset.targetCredit;
   $('image-lightbox').hidden = false;
   document.body.classList.add('image-lightbox-open');
   $('image-lightbox-close').focus();
@@ -770,6 +776,7 @@ function closeTargetImage() {
   $('image-lightbox-image').removeAttribute('src');
   $('image-lightbox-image').alt = '';
   $('image-lightbox-caption').textContent = '';
+  $('image-lightbox-credit').removeAttribute('href');
   document.body.classList.remove('image-lightbox-open');
   if (lastTargetImageTrigger?.isConnected) lastTargetImageTrigger.focus();
   lastTargetImageTrigger = null;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Target thumbnails now open in a mobile-safe expanded view with an explicit close control.
+- Expanded images show an image-credit and licence link directly below the image; the separate list-level **i** button remains available without stealing the image tap target.
+- The image-credits page now uses an icon-only return control while keeping its accessible label.
+
 ## 0.3.2 - 2026-08-18
 
 - Added an always-visible **Back to Astronomy Observer** control to object-image credits, including deep-linked entries opened inside Home Assistant Ingress.
