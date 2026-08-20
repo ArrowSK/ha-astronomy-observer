@@ -147,7 +147,7 @@ Astronomy Observer bundles compact target thumbnails for the Messier catalogue p
 
 The image set is intentionally conservative. The builder first requests a representative free image and then verifies the corresponding Wikimedia Commons licence metadata. Only Public Domain, CC0, CC BY and CC BY-SA files are accepted. Fair-use/non-free, NonCommercial, NoDerivatives, GFDL-only and unknown licences are rejected.
 
-Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. The credits page includes a clear return control in embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.
+Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. Tap or click a thumbnail to expand it for a proper look — especially useful on a phone — and close the full-screen view with the × button, the backdrop or Escape. The separate **i** credit control sits below the thumbnail so it does not compete with the image tap target. The credits page includes a clear return control in embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.
 
 [Object-image licence details →](THIRD_PARTY_LICENSES.md#wikimedia-commons-object-thumbnails)
 

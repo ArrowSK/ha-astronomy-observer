@@ -40,6 +40,18 @@ def main() -> None:
     for marker in ["Wikimedia Commons", "not relicensed", "CC BY", "Public domain"]:
         require(marker in credits + notice + MANIFEST.read_text(encoding="utf-8"), f"thumbnail attribution marker missing: {marker}")
 
+    ui = (ROOT / "astronomy_observer" / "web" / "index.html").read_text(encoding="utf-8")
+    for ui_marker in [
+        'class="target-thumb-wrap target-thumb-button"',
+        'class="target-credit"',
+        'id="image-lightbox"',
+        'id="image-lightbox-close"',
+        "function openTargetImage(button)",
+        "function closeTargetImage()",
+    ]:
+        require(ui_marker in ui, f"target image lightbox marker missing: {ui_marker}")
+    require('position: absolute; right: 2px; bottom: 2px' not in ui, "image credit must not overlay the thumbnail")
+
     print(f"Object thumbnail validation passed ({len(items)} licensed thumbnails)")
 
 
