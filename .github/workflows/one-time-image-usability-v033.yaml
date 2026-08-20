@@ -99,7 +99,6 @@ jobs:
               "  document.body.classList.remove('image-lightbox-open');\n"
           )
 
-          # Credits page: keep the title, but make the return control icon-only and accessible.
           old_back = '<a id="credits-back" target="_self" href="../#targets" onclick="if(location.protocol===\'file:\'){this.href=\'../index.html#targets\';}">← Back to Astronomy Observer</a>'
           new_back = '<a id="credits-back" target="_self" href="../#targets" aria-label="Back to Astronomy Observer" title="Back to Astronomy Observer" onclick="if(location.protocol===\'file:\'){this.href=\'../index.html#targets\';}">←</a>'
           replace('astronomy_observer/data/object_images/credits.html', old_back, new_back)
@@ -110,7 +109,6 @@ jobs:
           replace('astronomy_observer/data/object_images/credits.html', old_css, new_css)
           replace('astronomy_observer/scripts/build_object_thumbnails.py', old_css, new_css)
 
-          # Strengthen regression validation for the exact interaction contract.
           validator = root / 'tests/validate_object_images.py'
           text = validator.read_text(encoding='utf-8')
           text = text.replace(
@@ -123,7 +121,6 @@ jobs:
           text = text.replace(marker, marker + "        'id=\"image-lightbox-credit\"',\n        'data-target-credit=',\n", 1)
           validator.write_text(text, encoding='utf-8')
 
-          # Release metadata: this visible UI fix must be installable as an update.
           version_files = [
               'astronomy_observer/config.yaml',
               'astronomy_observer/Dockerfile',
@@ -180,3 +177,5 @@ jobs:
           git add README.md astronomy_observer android tests .github/workflows/android.yaml
           git commit -m "Improve image viewing and credits"
           git push origin HEAD:main
+
+# trigger
