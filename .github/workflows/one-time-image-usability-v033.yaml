@@ -1,0 +1,182 @@
+name: One-time image usability v0.3.3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-image-usability-v033.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Apply image usability refinements
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+
+          def replace(path, old, new, count=1):
+              p = root / path
+              text = p.read_text(encoding='utf-8')
+              found = text.count(old)
+              if found != count:
+                  raise SystemExit(f'{path}: expected {count} occurrence(s), found {found}: {old[:100]!r}')
+              p.write_text(text.replace(old, new, count), encoding='utf-8')
+
+          index = 'astronomy_observer/web/index.html'
+
+          replace(
+              index,
+              '    .image-lightbox-caption { color: #c7d3e7; font-size: 14px; text-align: center; }\n',
+              '    .image-lightbox-caption { color: #c7d3e7; font-size: 14px; text-align: center; }\n'
+              '    .image-lightbox-credit { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px; text-decoration: none; min-height: 32px; padding: 4px 8px; border-radius: 8px; }\n'
+              '    .image-lightbox-credit:hover { background: rgba(158,197,255,.08); text-decoration: underline; }\n'
+          )
+
+          replace(
+              index,
+              '    .image-lightbox { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.94); }\n'
+              '    .image-lightbox-panel { position: relative; width: min(920px, 94vw); max-height: 92vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }\n'
+              '    .image-lightbox-image { width: min(720px, 92vw); height: auto; max-width: 100%; max-height: calc(92vh - 68px); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }\n',
+              '    .image-lightbox { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(3,6,12,.94); }\n'
+              '    .image-lightbox-panel { position: relative; width: min(920px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; align-items: center; gap: 8px; }\n'
+              '    .image-lightbox-image { width: min(820px, 100%); height: auto; max-width: 100%; max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }\n'
+          )
+
+          replace(
+              index,
+              '      .image-lightbox { padding: 14px; }\n'
+              '      .image-lightbox-panel { width: 100%; }\n'
+              '      .image-lightbox-close { top: 4px; right: 4px; }\n'
+              '      .image-lightbox-image { max-height: calc(100vh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }\n',
+              '      .image-lightbox { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }\n'
+              '      .image-lightbox-panel { width: 100%; max-height: calc(100dvh - 20px); }\n'
+              '      .image-lightbox-close { top: 4px; right: 4px; }\n'
+              '      .image-lightbox-image { width: 100%; max-height: calc(100dvh - 138px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }\n'
+          )
+
+          replace(
+              index,
+              '    <img id="image-lightbox-image" class="image-lightbox-image" alt="">\n'
+              '    <div id="image-lightbox-caption" class="image-lightbox-caption"></div>\n',
+              '    <img id="image-lightbox-image" class="image-lightbox-image" alt="">\n'
+              '    <div id="image-lightbox-caption" class="image-lightbox-caption"></div>\n'
+              '    <a id="image-lightbox-credit" class="image-lightbox-credit" href="#" aria-label="Open image credit and licence">ⓘ <span>Image credit &amp; licence</span></a>\n'
+          )
+
+          replace(
+              index,
+              '    return `<div class="target-media"><button class="target-thumb-wrap target-thumb-button" type="button" data-target-image="${imagePath}" data-target-name="${esc(r.name)}" aria-label="Expand image of ${esc(r.name)}"><span class="target-thumb-fallback" aria-hidden="true">✦</span>${image}</button>${credit}</div>`;\n',
+              '    return `<div class="target-media"><button class="target-thumb-wrap target-thumb-button" type="button" data-target-image="${imagePath}" data-target-name="${esc(r.name)}" data-target-credit="object-images/credits.html#${key}" aria-label="Expand image of ${esc(r.name)}"><span class="target-thumb-fallback" aria-hidden="true">✦</span>${image}</button>${credit}</div>`;\n'
+          )
+
+          replace(
+              index,
+              "  $('image-lightbox-caption').textContent = button.dataset.targetName || '';\n"
+              "  $('image-lightbox').hidden = false;\n",
+              "  $('image-lightbox-caption').textContent = button.dataset.targetName || '';\n"
+              "  const credit = button.dataset.targetCredit || '#';\n"
+              "  $('image-lightbox-credit').href = credit;\n"
+              "  $('image-lightbox-credit').hidden = !button.dataset.targetCredit;\n"
+              "  $('image-lightbox').hidden = false;\n"
+          )
+
+          replace(
+              index,
+              "  $('image-lightbox-caption').textContent = '';\n"
+              "  document.body.classList.remove('image-lightbox-open');\n",
+              "  $('image-lightbox-caption').textContent = '';\n"
+              "  $('image-lightbox-credit').removeAttribute('href');\n"
+              "  document.body.classList.remove('image-lightbox-open');\n"
+          )
+
+          # Credits page: keep the title, but make the return control icon-only and accessible.
+          old_back = '<a id="credits-back" target="_self" href="../#targets" onclick="if(location.protocol===\'file:\'){this.href=\'../index.html#targets\';}">← Back to Astronomy Observer</a>'
+          new_back = '<a id="credits-back" target="_self" href="../#targets" aria-label="Back to Astronomy Observer" title="Back to Astronomy Observer" onclick="if(location.protocol===\'file:\'){this.href=\'../index.html#targets\';}">←</a>'
+          replace('astronomy_observer/data/object_images/credits.html', old_back, new_back)
+          replace('astronomy_observer/scripts/build_object_thumbnails.py', old_back, new_back)
+
+          old_css = '.return-bar a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid #28344a;border-radius:9px;background:#172033;color:#eef3ff;text-decoration:none;font-weight:650}'
+          new_css = '.return-bar a{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:1px solid #28344a;border-radius:9px;background:#172033;color:#eef3ff;text-decoration:none;font-size:22px;font-weight:650}'
+          replace('astronomy_observer/data/object_images/credits.html', old_css, new_css)
+          replace('astronomy_observer/scripts/build_object_thumbnails.py', old_css, new_css)
+
+          # Strengthen regression validation for the exact interaction contract.
+          validator = root / 'tests/validate_object_images.py'
+          text = validator.read_text(encoding='utf-8')
+          text = text.replace(
+              "for navigation_marker in ['<base target=\"_blank\">', \"Back to Astronomy Observer\", 'target=\"_self\"', \"../#targets\"]:",
+              "for navigation_marker in ['<base target=\"_blank\">', 'aria-label=\"Back to Astronomy Observer\"', '>←</a>', 'target=\"_self\"', \"../#targets\"]:"
+          )
+          marker = "        'id=\"image-lightbox-close\"',\n"
+          if marker not in text:
+              raise SystemExit('validator: lightbox-close marker not found')
+          text = text.replace(marker, marker + "        'id=\"image-lightbox-credit\"',\n        'data-target-credit=',\n", 1)
+          validator.write_text(text, encoding='utf-8')
+
+          # Release metadata: this visible UI fix must be installable as an update.
+          version_files = [
+              'astronomy_observer/config.yaml',
+              'astronomy_observer/Dockerfile',
+              'android/app/build.gradle.kts',
+              'android/build-apk.sh',
+              '.github/workflows/android.yaml',
+          ]
+          for path in version_files:
+              p = root / path
+              text = p.read_text(encoding='utf-8')
+              if '0.3.2' not in text:
+                  raise SystemExit(f'{path}: 0.3.2 version marker not found')
+              p.write_text(text.replace('0.3.2', '0.3.3'), encoding='utf-8')
+
+          gradle = root / 'android/app/build.gradle.kts'
+          text = gradle.read_text(encoding='utf-8')
+          if 'versionCode = 30200' not in text:
+              raise SystemExit('Android versionCode 30200 not found')
+          gradle.write_text(text.replace('versionCode = 30200', 'versionCode = 30300', 1), encoding='utf-8')
+
+          readme = root / 'README.md'
+          text = readme.read_text(encoding='utf-8')
+          if 'Current release: 0.3.2.' in text:
+              readme.write_text(text.replace('Current release: 0.3.2.', 'Current release: 0.3.3.', 1), encoding='utf-8')
+
+          changelog = root / 'astronomy_observer/CHANGELOG.md'
+          text = changelog.read_text(encoding='utf-8')
+          entry = '## 0.3.3\n\n- Target thumbnails now open in a mobile-safe expanded view with an explicit close control.\n- Expanded images show an image-credit and licence link directly below the image; the separate list-level **i** button remains available without stealing the image tap target.\n- The image-credits page now uses an icon-only return control while keeping its accessible label.\n\n'
+          if '## 0.3.3' not in text:
+              first = text.find('## ')
+              if first == -1:
+                  text = entry + text
+              else:
+                  text = text[:first] + entry + text[first:]
+              changelog.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate repository and image UI
+        run: |
+          python3 tests/validate_object_images.py
+          python3 tests/validate_repository.py
+          python3 android/validate.py
+          python3 -m py_compile astronomy_observer/scripts/build_object_thumbnails.py tests/validate_object_images.py
+          grep -q 'id="image-lightbox-credit"' astronomy_observer/web/index.html
+          grep -q 'data-target-credit=' astronomy_observer/web/index.html
+          grep -q 'aria-label="Back to Astronomy Observer"' astronomy_observer/data/object_images/credits.html
+          ! grep -q '>← Back to Astronomy Observer</a>' astronomy_observer/data/object_images/credits.html
+
+      - name: Commit directly to main and remove this workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-time-image-usability-v033.yaml
+          git add README.md astronomy_observer android tests .github/workflows/android.yaml
+          git commit -m "Improve image viewing and credits"
+          git push origin HEAD:main
