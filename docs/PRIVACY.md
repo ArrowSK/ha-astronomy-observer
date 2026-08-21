@@ -36,6 +36,8 @@ The current MET Norway request path also stays within that provider's documented
 
 NOAA OVATION, CelesTrak and Minor Planet Center downloads are global datasets. Astronomy Observer does not put the observer's coordinates into those download URLs.
 
+In the Home Assistant and standalone web editions, target pictures can optionally be improved on demand through the English Wikipedia PageImages API and Wikimedia Commons image metadata. Those requests contain the target title or image filename, not the observing location. An image is used only when Commons metadata reports Public Domain, CC0, CC BY or CC BY-SA. The Android embedded WebView keeps remote network loading disabled, so this optional image path is not used there.
+
 The World Atlas, meteor-shower table and reduced OpenNGC observing catalogue are local runtime resources and do not require a location request to a remote service.
 
 ## Home Assistant edition
@@ -85,4 +87,4 @@ Astronomy Engine and OpenNGC source data are downloaded while building images/AP
 
 ## Telemetry
 
-There is none. Network requests are limited to the documented astronomy/weather sources needed by enabled features and, when you explicitly open one, normal external links in your chosen browser.
+There is none. Network requests are limited to the documented astronomy/weather sources needed by enabled features, the optional target-picture lookup described above in Home Assistant/web, and normal external links that you explicitly open.
