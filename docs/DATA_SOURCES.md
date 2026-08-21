@@ -5,9 +5,11 @@ Astronomy Observer keeps each outside source replaceable and cached separately. 
 
 ## Target thumbnails
 
-Small target pictures are an offline presentation aid, not an astronomy-data input. A build-time script asks Wikipedia for the representative free image for each Messier object and a short list of familiar Solar-System/meteor targets, then verifies the actual file and its per-file licence through Wikimedia Commons before including it. The runtime never scrapes Wikipedia and does not contact Wikimedia to draw the target list.
+Small target pictures are a presentation aid, not an astronomy-data input. A build-time script asks Wikipedia for the representative free image for each Messier object and a short list of familiar Solar-System/meteor targets, then verifies the actual file and its per-file licence through Wikimedia Commons before including it. Those compact bundled files remain the offline baseline in every edition.
 
-Only Public domain, CC0, CC BY and CC BY-SA files are accepted. Per-image creator/source/licence metadata travels with every installation in `object-images/credits.html` and `manifest.json`. Targets without a verified bundled image keep the same ranking and simply show the neutral fallback marker.
+Home Assistant and standalone web can additionally request target pictures from the same Wikipedia PageImages / Wikimedia Commons path at runtime. Existing bundled objects request a larger copy only when the image is expanded; selected NGC/IC/deep-sky objects, comets and the ISS can request a small preview when no bundled image exists. The runtime uses the same licence allow-list and does not send observing coordinates to Wikimedia. Android intentionally keeps its embedded WebView network-blocked and uses only the bundled images/fallback marker.
+
+Only Public domain, CC0, CC BY and CC BY-SA files are accepted. Per-image creator/source/licence metadata for bundled images travels with every installation in `object-images/credits.html` and `manifest.json`; dynamically loaded images link directly to their Commons source/licence information. Image availability never changes target ranking.
 
 ## Source table
 
@@ -18,6 +20,7 @@ Only Public domain, CC0, CC BY and CC BY-SA files are accepted. Per-image creato
 | Aerosols / PM2.5 | Open-Meteo Air Quality | unavailable under MET Norway fallback | App refresh |
 | Sun, Moon, planets | Astronomy Engine, local | none required | Recalculated locally |
 | Deep-sky catalogue | OpenNGC pinned at build | build fails if source unavailable | Static in image |
+| Target pictures | bundled licensed WebP set; optional Wikipedia/Commons lookup in HA/web | bundled image or generic marker | 256 px missing preview; 1280 px expanded preview; normal browser cache |
 | Meteor showers | Bundled major-shower table | none | Static; reviewed by release |
 | Comets | Minor Planet Center elements | second MPC comet-elements endpoint | 12 h normal cache; stale cache rejected after 7 d |
 | Satellites | CelesTrak visual GP data | recent local cache | 12 h normal cache; stale cache rejected after 48 h |
