@@ -49,6 +49,8 @@ The builder accepts only files reported as **Public domain, CC0, CC BY, or CC BY
 
 The bundled copy is a reduced WebP thumbnail. `astronomy_observer/data/object_images/manifest.json` records the original Commons file, creator, licence, source URL and the thumbnail transformation. `object-images/credits.html` is shipped with Home Assistant, Docker/web and Android so those credits remain accessible from the target image itself.
 
+In Home Assistant and the standalone web edition, the target list may also request a missing preview or a clearer expanded copy at runtime. This uses the same Wikipedia/Commons path and the same licence allow-list. A dynamically displayed image retains its original Wikimedia licence and source; its Commons source/licence link is shown from the target UI. These optional runtime images are not added to the bundled application image and are not relicensed under PolyForm. Android keeps its embedded WebView local-only and does not use this runtime image path.
+
 Wikimedia Commons: https://commons.wikimedia.org/
 
 Wikimedia developer guidance for image licensing: https://foundation.wikimedia.org/wiki/Legal:Wikimedia_Developer_App_Guidelines
