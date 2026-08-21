@@ -18,7 +18,7 @@ export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
 
 The resulting local/CI preview is:
 
-`android/generated/apk/astronomy-observer-0.3.0-debug.apk`
+`android/generated/apk/astronomy-observer-0.3.4-debug.apk`
 
 Android's debug signing makes that APK installable for sideload testing. It is not a permanent public update identity. A public release should be signed with one stable project-controlled release key kept outside the repository; the private key must never be committed.
 
