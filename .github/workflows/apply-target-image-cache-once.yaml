@@ -484,7 +484,6 @@ async function improveTargetLightbox(button) {
               text = p.read_text(encoding='utf-8')
               anchor = 'Wikimedia Commons'
               if anchor not in text:
-                  # Append a small self-contained note rather than forcing unrelated prose changes.
                   text += '\n\n## Target pictures\n\nCommon observing targets include licensed local previews. When online, the target list can also request a missing or clearer picture from Wikimedia Commons, verify its per-file licence, and cache the accepted image locally. Only Public Domain, CC0, CC BY and CC BY-SA images are accepted. If the lookup fails or the licence is unsuitable, the normal astronomy marker remains.\n'
               else:
                   text += '\n\n### Interactive target-picture cache\n\nThe bundled target previews are the offline baseline. For a recommended object without a bundled image, or when a clearer expanded view is requested, Astronomy Observer can query Wikipedia/Wikimedia directly, accept only Public Domain/CC0/CC BY/CC BY-SA files, and cache the verified result locally. Network failures do not remove the local preview and unsuitable licences are never displayed.\n'
@@ -534,3 +533,5 @@ async function improveTargetLightbox(button) {
           git add -A
           git commit -m "Improve target image clarity and on-demand cache"
           git push origin HEAD:main
+
+# Trigger after the workflow exists on main.
