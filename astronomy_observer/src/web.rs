@@ -14,6 +14,7 @@ use std::sync::{mpsc::Sender, Arc, RwLock};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 const INDEX: &str = include_str!("../web/index.html");
+const TARGET_IMAGE_SCRIPT: &str = include_str!("../web/target-images.js");
 const DASHBOARD: &str = include_str!("../dashboard/astronomy-dashboard.yaml");
 const OBJECT_IMAGE_DIR: &str = "/usr/share/astronomy-observer/object-images";
 const MAX_REQUEST_BODY: usize = 16 * 1024;
@@ -85,15 +86,29 @@ fn with_security_headers(
         .with_header(header("Referrer-Policy", "no-referrer"))
 }
 
-fn html_response(body: &'static str) -> Response<std::io::Cursor<Vec<u8>>> {
+fn enhanced_index() -> String {
+    let marker = "</body>";
+    let injection = format!("<script src=\"target-images.js?v=0.3.4\"></script>\n{marker}");
+    INDEX.replacen(marker, &injection, 1)
+}
+
+fn html_response(body: String) -> Response<std::io::Cursor<Vec<u8>>> {
     with_security_headers(
         Response::from_string(body)
             .with_header(header("Content-Type", "text/html; charset=utf-8"))
             .with_header(header(
                 "Content-Security-Policy",
-                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'",
+                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://upload.wikimedia.org; connect-src 'self' https://en.wikipedia.org https://commons.wikimedia.org; frame-ancestors 'self'",
             )),
     )
+}
+
+fn javascript_response() -> Response<std::io::Cursor<Vec<u8>>> {
+    Response::from_string(TARGET_IMAGE_SCRIPT)
+        .with_header(header("Content-Type", "text/javascript; charset=utf-8"))
+        .with_header(header("Cache-Control", "public, max-age=604800"))
+        .with_header(header("X-Content-Type-Options", "nosniff"))
+        .with_header(header("Referrer-Policy", "no-referrer"))
 }
 
 fn json_response(value: serde_json::Value, status: u16) -> Response<std::io::Cursor<Vec<u8>>> {
@@ -458,7 +473,10 @@ pub fn serve(
             let method = request.method().clone();
             match (method, path) {
                 (Method::Get, "/") | (Method::Get, "/index.html") => {
-                    let _ = request.respond(html_response(INDEX));
+                    let _ = request.respond(html_response(enhanced_index()));
+                }
+                (Method::Get, "/target-images.js") => {
+                    let _ = request.respond(javascript_response());
                 }
                 (Method::Get, value) if value.starts_with("/object-images/") => {
                     let name = value.trim_start_matches("/object-images/");
@@ -563,6 +581,13 @@ mod tests {
         assert!(allowed("127.0.0.1".parse().unwrap()));
         assert!(allowed("172.30.32.2".parse().unwrap()));
         assert!(!allowed("172.30.32.3".parse().unwrap()));
+    }
+
+    #[test]
+    fn target_image_enhancement_is_injected() {
+        let html = enhanced_index();
+        assert!(html.contains("target-images.js?v=0.3.4"));
+        assert!(TARGET_IMAGE_SCRIPT.contains("resolveCommons"));
     }
 
     #[test]
