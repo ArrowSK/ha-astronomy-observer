@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 const APP_CONFIG: &str = include_str!("../../astronomy_observer/config.yaml");
+const TARGET_IMAGE_SCRIPT: &str = include_str!("../../astronomy_observer/web/target-images.js");
 const MAX_BODY: usize = 16 * 1024;
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -51,16 +52,25 @@ fn html_response(body: String) -> Response<std::io::Cursor<Vec<u8>>> {
             .with_header(header("Content-Type", "text/html; charset=utf-8"))
             .with_header(header(
                 "Content-Security-Policy",
-                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'",
+                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://upload.wikimedia.org; connect-src 'self' https://en.wikipedia.org https://commons.wikimedia.org; frame-ancestors 'self'",
             )),
     )
 }
 
+fn javascript_response() -> Response<std::io::Cursor<Vec<u8>>> {
+    Response::from_string(TARGET_IMAGE_SCRIPT)
+        .with_header(header("Content-Type", "text/javascript; charset=utf-8"))
+        .with_header(header("Cache-Control", "public, max-age=604800"))
+        .with_header(header("X-Content-Type-Options", "nosniff"))
+        .with_header(header("Referrer-Policy", "no-referrer"))
+}
 
 fn object_asset_response(name: &str) -> Option<Response<std::io::Cursor<Vec<u8>>>> {
     if name.is_empty()
         || name.contains("..")
-        || !name.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
     {
         return None;
     }
@@ -150,11 +160,20 @@ fn handle_request(request: Request, index: &str, temp_root: &Path, config_dir: &
         (Method::Get, "/") | (Method::Get, "/index.html") => {
             let _ = request.respond(html_response(index.to_string()));
         }
+        (Method::Get, "/target-images.js") => {
+            let _ = request.respond(javascript_response());
+        }
         (Method::Get, value) if value.starts_with("/object-images/") => {
             let name = value.trim_start_matches("/object-images/");
             match object_asset_response(name) {
-                Some(response) => { let _ = request.respond(response); }
-                None => { let _ = request.respond(Response::from_string("not found").with_status_code(StatusCode(404))); }
+                Some(response) => {
+                    let _ = request.respond(response);
+                }
+                None => {
+                    let _ = request.respond(
+                        Response::from_string("not found").with_status_code(StatusCode(404)),
+                    );
+                }
             }
         }
         (Method::Get, "/health") => {
@@ -188,7 +207,10 @@ pub fn run() -> AppResult<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|value| value == "--self-test") {
         let html = ui::web_index()?;
-        if !html.contains("api/web/snapshot") || !html.contains("web-location-lat") {
+        if !html.contains("api/web/snapshot")
+            || !html.contains("web-location-lat")
+            || !html.contains("target-images.js?v=0.3.4")
+        {
             return Err(err("standalone web interface self-test failed"));
         }
         println!("web self-test passed");
