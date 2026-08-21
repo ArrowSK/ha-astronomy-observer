@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 - 2026-08-22
+
+- Kept bundled target thumbnails at 192 px so Home Assistant, Docker and Android packages do not grow merely to improve the expanded view.
+- Home Assistant and standalone web now request a larger licence-verified Wikimedia Commons preview only when a target image is opened; the local image remains the immediate/offline fallback.
+- Deep-sky/NGC/IC targets, comets and the ISS can acquire a small on-demand preview when they previously had only the generic astronomy marker, with at most two thumbnail lookups in flight.
+- Runtime images use the same Public Domain / CC0 / CC BY / CC BY-SA allow-list as bundled images and send target titles or image filenames, not observing coordinates, to Wikimedia.
+- Standalone Android keeps its hardened local-only WebView network boundary and therefore continues to use bundled images and the normal fallback marker offline.
+
 ## 0.3.1 - 2026-08-17
 
 - Added small offline target thumbnails for Messier objects plus familiar planets, the Moon, the Milky Way and major meteor showers.
