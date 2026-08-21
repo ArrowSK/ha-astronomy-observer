@@ -38,7 +38,7 @@ def main() -> None:
     gradle = (ANDROID / "app/build.gradle.kts").read_text(encoding="utf-8")
     require('applicationId = "com.arrowsk.astronomyobserver"' in gradle, "Android application ID changed")
     require("compileSdk = 36" in gradle and "targetSdk = 36" in gradle, "Android SDK target must be 36")
-    require('versionName = "0.3.3"' in gradle, "Android version must match 0.3.3 release")
+    require('versionName = "0.3.4"' in gradle, "Android version must match 0.3.4 release")
     require('"arm64-v8a", "x86_64"' in gradle, "Android ABI set changed")
 
     manifest = (ANDROID / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
@@ -81,8 +81,8 @@ def main() -> None:
     )
 
     ha_config = (HA / "config.yaml").read_text(encoding="utf-8")
-    require('version: "0.3.3"' in ha_config, "Home Assistant version must match Android release")
-    require("ARG BUILD_VERSION=0.3.3" in (HA / "Dockerfile").read_text(encoding="utf-8"), "container version mismatch")
+    require('version: "0.3.4"' in ha_config, "Home Assistant version must match Android release")
+    require("ARG BUILD_VERSION=0.3.4" in (HA / "Dockerfile").read_text(encoding="utf-8"), "container version mismatch")
 
     native_build = (ANDROID / "build-native.sh").read_text(encoding="utf-8")
     catalogue_build = (ANDROID / "build-catalog.sh").read_text(encoding="utf-8")
