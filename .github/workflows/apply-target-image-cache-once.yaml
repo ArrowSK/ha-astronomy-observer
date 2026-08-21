@@ -1,0 +1,536 @@
+name: Apply target image enhancement once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/apply-target-image-cache-once.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install image builder dependency
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Apply UI, cache, version and documentation changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+
+          def replace(path, old, new, count=-1):
+              p = root / path
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'marker not found in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, count), encoding='utf-8')
+
+          # 0.3.4 release metadata. Keep historical changelog text intact and add a new section below.
+          replace('astronomy_observer/config.yaml', 'version: "0.3.3"', 'version: "0.3.4"', 1)
+          replace('astronomy_observer/Dockerfile', 'ARG BUILD_VERSION=0.3.3', 'ARG BUILD_VERSION=0.3.4', 1)
+          replace('android/app/build.gradle.kts', 'versionCode = 30300\n        versionName = "0.3.3"', 'versionCode = 30400\n        versionName = "0.3.4"', 1)
+          replace('android/build-apk.sh', '0.3.3', '0.3.4')
+          replace('.github/workflows/android.yaml', '0.3.3', '0.3.4')
+          replace('README.md', '**Current release: 0.3.3.**', '**Current release: 0.3.4.**', 1)
+
+          # Clearer offline previews. The on-demand path below can still fetch a larger image when opened.
+          replace('astronomy_observer/scripts/build_object_thumbnails.py', 'THUMB_MAX = 192', 'THUMB_MAX = 512', 1)
+
+          # Allow only the Wikimedia hosts used by the explicit, licence-checked on-demand image resolver.
+          old_csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'"
+          new_csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://upload.wikimedia.org; connect-src 'self' https://en.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; frame-ancestors 'self'"
+          replace('astronomy_observer/src/web.rs', old_csp, new_csp, 1)
+          replace('webapp/src/server.rs', old_csp, new_csp, 1)
+
+          ui_path = root / 'astronomy_observer/web/index.html'
+          ui = ui_path.read_text(encoding='utf-8')
+
+          ui = ui.replace(
+              '    .image-lightbox-panel { position: relative; width: min(920px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; align-items: center; gap: 8px; }\n'
+              '    .image-lightbox-image { width: min(820px, 100%); height: auto; max-width: 100%; max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }\n'
+              '    .image-lightbox-caption { color: #c7d3e7; font-size: 14px; text-align: center; }',
+              '    .image-lightbox-panel { position: relative; width: min(1240px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; align-items: center; gap: 8px; }\n'
+              '    .image-lightbox-image { width: auto; height: auto; max-width: min(1120px, 100%); max-height: calc(100dvh - 178px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); object-fit: contain; border-radius: 12px; border: 1px solid var(--line); background: #070b13; }\n'
+              '    .image-lightbox-caption { color: #c7d3e7; font-size: 15px; text-align: center; font-weight: 620; }\n'
+              '    .image-lightbox-meta { min-height: 20px; max-width: min(920px, 100%); color: var(--muted); font-size: 13px; line-height: 1.45; text-align: center; }\n'
+              '    .target-thumb-button.image-loading::after { content: ""; position: absolute; width: 18px; height: 18px; border: 2px solid rgba(238,243,255,.28); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; z-index: 3; }\n'
+              '    .target-image-note { margin-top: 10px; color: var(--muted); font-size: 11.5px; line-height: 1.45; }'
+          )
+          if '.image-lightbox-meta' not in ui:
+              raise SystemExit('failed to patch lightbox styles')
+
+          ui = ui.replace(
+              '      <h2>Best targets tonight</h2>\n      <div id="target-list"></div>',
+              '      <h2>Best targets tonight</h2>\n      <div id="target-list"></div>\n      <div class="target-image-note">Target pictures are used only when a licence can be verified. Missing pictures are looked up from Wikimedia Commons when online and cached on this device; bundled previews continue to work offline.</div>',
+              1,
+          )
+          ui = ui.replace(
+              '    <div id="image-lightbox-caption" class="image-lightbox-caption"></div>\n    <a id="image-lightbox-credit"',
+              '    <div id="image-lightbox-caption" class="image-lightbox-caption"></div>\n    <div id="image-lightbox-meta" class="image-lightbox-meta" aria-live="polite"></div>\n    <a id="image-lightbox-credit"',
+              1,
+          )
+
+          dynamic_js = r'''
+const TARGET_IMAGE_DB = 'astronomy-observer-target-images-v1';
+const TARGET_IMAGE_STORE = 'images';
+const TARGET_IMAGE_CACHE_DAYS = 180;
+const TARGET_IMAGE_MISS_DAYS = 7;
+const targetObjectUrls = new Map();
+let targetImageDbPromise = null;
+
+function targetImageKey(r) {
+  const name = String(r?.name || '').trim();
+  const category = String(r?.category || '').toLowerCase();
+  const messier = name.match(/(?:^|[^A-Za-z])M\s*0*(\d{1,3})(?=\b|\s|\()/i);
+  if (messier) {
+    const number = Number(messier[1]);
+    if (number >= 1 && number <= 110) return `m${String(number).padStart(3, '0')}`;
+  }
+  const lower = name.toLowerCase();
+  const planets = new Set(['mercury','venus','mars','jupiter','saturn','uranus','neptune']);
+  if (category.includes('planet') && planets.has(lower)) return `planet-${lower}`;
+  if (lower === 'moon') return 'moon';
+  if (lower === 'milky way' || lower === 'galactic centre' || lower === 'galactic center') return 'milky-way';
+  const meteors = {
+    'perseids':'meteor-perseids', 'geminids':'meteor-geminids', 'quadrantids':'meteor-quadrantids',
+    'lyrids':'meteor-lyrids', 'eta aquariids':'meteor-eta-aquariids', 'delta aquariids':'meteor-delta-aquariids',
+    'orionids':'meteor-orionids', 'leonids':'meteor-leonids', 'taurids':'meteor-taurids', 'ursids':'meteor-ursids'
+  };
+  if (category.includes('meteor') && meteors[lower]) return meteors[lower];
+  return null;
+}
+
+function targetImageCandidates(r) {
+  const name = String(r?.name || '').trim();
+  const category = String(r?.category || '').toLowerCase();
+  if (!name) return [];
+  const values = [];
+  const add = value => {
+    const cleaned = String(value || '').replace(/\s+/g, ' ').trim();
+    if (cleaned && !values.some(item => item.toLowerCase() === cleaned.toLowerCase())) values.push(cleaned);
+  };
+  const messier = name.match(/(?:^|[^A-Za-z])M\s*0*(\d{1,3})(?=\b|\s|\()/i);
+  if (messier) add(`Messier ${Number(messier[1])}`);
+  const lower = name.toLowerCase();
+  if (category.includes('planet')) add(lower === 'mercury' ? 'Mercury (planet)' : name);
+  if (lower === 'moon') add('Moon');
+  if (lower === 'milky way' || lower.includes('galactic centre') || lower.includes('galactic center')) add('Milky Way');
+  if (category.includes('meteor')) add(name);
+  if (category.includes('deep sky')) {
+    const parts = name.split(/\s+[—–]\s+/);
+    if (parts.length > 1) add(parts.slice(1).join(' — ').replace(/\s*\([^)]*\)\s*$/, ''));
+    const ngc = name.match(/\bNGC\s*0*(\d+)\b/i);
+    const ic = name.match(/\bIC\s*0*(\d+)\b/i);
+    if (ngc) add(`NGC ${Number(ngc[1])}`);
+    if (ic) add(`IC ${Number(ic[1])}`);
+    add(name.replace(/\bNGC\s*0+(\d+)/i, 'NGC $1').replace(/\bIC\s*0+(\d+)/i, 'IC $1'));
+  }
+  if (category.includes('comet')) add(name);
+  return values.slice(0, 5);
+}
+
+function targetCanHaveImage(r) {
+  return targetImageCandidates(r).length > 0;
+}
+
+function targetThumbnail(r, index) {
+  const key = targetImageKey(r);
+  const candidates = targetImageCandidates(r);
+  if (!key && !candidates.length) return `<div class="target-media"><div class="target-thumb-wrap"><span class="target-thumb-fallback" aria-hidden="true">✦</span></div></div>`;
+  const imagePath = key ? `object-images/${key}.webp` : '';
+  const image = imagePath ? `<img class="target-thumb" src="${imagePath}" alt="${esc(r.name)}" loading="lazy" decoding="async" onerror="this.remove()">` : '';
+  const creditPath = key ? `object-images/credits.html#${key}` : '';
+  const credit = `<a class="target-credit" ${creditPath ? `href="${creditPath}"` : ''} ${creditPath ? '' : 'hidden'} title="Image credit and licence" aria-label="Image credit and licence for ${esc(r.name)}">i</a>`;
+  return `<div class="target-media"><button class="target-thumb-wrap target-thumb-button" type="button" data-target-index="${index}" ${imagePath ? `data-target-image="${imagePath}"` : ''} data-target-name="${esc(r.name)}" ${creditPath ? `data-target-credit="${creditPath}"` : ''} aria-label="Open image of ${esc(r.name)}"><span class="target-thumb-fallback" aria-hidden="true">✦</span>${image}</button>${credit}</div>`;
+}
+
+function openTargetImageDb() {
+  if (!('indexedDB' in window)) return Promise.resolve(null);
+  if (targetImageDbPromise) return targetImageDbPromise;
+  targetImageDbPromise = new Promise(resolve => {
+    try {
+      const request = indexedDB.open(TARGET_IMAGE_DB, 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(TARGET_IMAGE_STORE)) request.result.createObjectStore(TARGET_IMAGE_STORE, {keyPath:'id'});
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch (_) { resolve(null); }
+  });
+  return targetImageDbPromise;
+}
+
+async function cachedTargetImage(id) {
+  if (targetObjectUrls.has(id)) return targetObjectUrls.get(id);
+  const db = await openTargetImageDb();
+  if (!db) return null;
+  const record = await new Promise(resolve => {
+    const request = db.transaction(TARGET_IMAGE_STORE, 'readonly').objectStore(TARGET_IMAGE_STORE).get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => resolve(null);
+  });
+  if (!record?.blob) return null;
+  if (Date.now() - Number(record.fetched_at || 0) > TARGET_IMAGE_CACHE_DAYS * 86400000) return null;
+  const result = {...record, objectUrl: URL.createObjectURL(record.blob)};
+  targetObjectUrls.set(id, result);
+  return result;
+}
+
+async function storeTargetImage(record) {
+  const db = await openTargetImageDb();
+  if (!db) return;
+  await new Promise(resolve => {
+    const request = db.transaction(TARGET_IMAGE_STORE, 'readwrite').objectStore(TARGET_IMAGE_STORE).put(record);
+    request.onsuccess = request.onerror = () => resolve();
+  });
+}
+
+function targetCacheId(r, size) {
+  return `${size >= 900 ? 'large' : 'thumb'}:${String(r?.category || '')}:${String(r?.name || '')}`.toLowerCase();
+}
+
+function targetMissKey(id) { return `ao-target-image-miss:${id}`; }
+function targetMissActive(id) {
+  try { return Number(localStorage.getItem(targetMissKey(id)) || 0) > Date.now(); } catch (_) { return false; }
+}
+function rememberTargetMiss(id) {
+  try { localStorage.setItem(targetMissKey(id), String(Date.now() + TARGET_IMAGE_MISS_DAYS * 86400000)); } catch (_) {}
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 9000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try { return await fetch(url, {...options, signal: controller.signal}); }
+  finally { clearTimeout(timer); }
+}
+
+function metadataText(metadata, key) {
+  const value = metadata?.[key]?.value;
+  if (!value) return '';
+  const temp = document.createElement('div');
+  temp.innerHTML = value;
+  return String(temp.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function allowedTargetImageLicense(value) {
+  const normal = String(value || '').trim().toLowerCase();
+  return normal === 'public domain' || normal.startsWith('cc0') || normal.startsWith('cc by ') || normal.startsWith('cc by-sa ');
+}
+
+async function resolveTargetImage(r, size) {
+  const candidates = targetImageCandidates(r);
+  if (!candidates.length) return null;
+  const id = targetCacheId(r, size);
+  const cached = await cachedTargetImage(id);
+  if (cached) return cached;
+  if (targetMissActive(id)) return null;
+
+  const pageParams = new URLSearchParams({
+    action:'query', format:'json', formatversion:'2', redirects:'1', prop:'pageimages', piprop:'name',
+    pilicense:'free', titles:candidates.join('|'), origin:'*'
+  });
+  const pageResponse = await fetchWithTimeout(`https://en.wikipedia.org/w/api.php?${pageParams}`, {cache:'force-cache'});
+  if (!pageResponse.ok) throw new Error(`Wikipedia HTTP ${pageResponse.status}`);
+  const pagePayload = await pageResponse.json();
+  const page = (pagePayload?.query?.pages || []).find(value => value?.pageimage);
+  if (!page?.pageimage) { rememberTargetMiss(id); return null; }
+
+  const commonsParams = new URLSearchParams({
+    action:'query', format:'json', formatversion:'2', prop:'imageinfo', iiprop:'url|extmetadata',
+    iiurlwidth:String(size), titles:`File:${page.pageimage}`, origin:'*'
+  });
+  const commonsResponse = await fetchWithTimeout(`https://commons.wikimedia.org/w/api.php?${commonsParams}`, {cache:'force-cache'});
+  if (!commonsResponse.ok) throw new Error(`Commons HTTP ${commonsResponse.status}`);
+  const commonsPayload = await commonsResponse.json();
+  const commonsPage = (commonsPayload?.query?.pages || []).find(value => value?.imageinfo?.length);
+  const info = commonsPage?.imageinfo?.[0];
+  const metadata = info?.extmetadata || {};
+  const license = metadataText(metadata, 'LicenseShortName');
+  if (!info || !allowedTargetImageLicense(license)) { rememberTargetMiss(id); return null; }
+  const imageUrl = info.thumburl || info.url;
+  if (!imageUrl || !String(imageUrl).startsWith('https://upload.wikimedia.org/')) { rememberTargetMiss(id); return null; }
+  const imageResponse = await fetchWithTimeout(imageUrl, {cache:'force-cache', mode:'cors'}, 14000);
+  if (!imageResponse.ok) throw new Error(`image HTTP ${imageResponse.status}`);
+  const blob = await imageResponse.blob();
+  if (!String(blob.type || '').startsWith('image/') || blob.size < 200) throw new Error('invalid image response');
+
+  const sourceUrl = info.descriptionurl || `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(page.pageimage).replaceAll('%20','_')}`;
+  const record = {
+    id, blob, fetched_at:Date.now(), source_url:sourceUrl,
+    creator:metadataText(metadata, 'Artist') || metadataText(metadata, 'Credit'),
+    license, license_url:metadataText(metadata, 'LicenseUrl'), source_file:page.pageimage
+  };
+  await storeTargetImage(record);
+  const result = {...record, objectUrl:URL.createObjectURL(blob)};
+  targetObjectUrls.set(id, result);
+  return result;
+}
+
+function applyResolvedTargetImage(button, result) {
+  if (!button || !result) return;
+  let image = button.querySelector('img.target-thumb');
+  if (!image) {
+    image = document.createElement('img');
+    image.className = 'target-thumb';
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.alt = button.dataset.targetName || 'Astronomy target';
+    button.appendChild(image);
+  }
+  image.src = result.objectUrl;
+  button.dataset.targetImage = result.objectUrl;
+  button.dataset.targetCredit = result.source_url || '';
+  button.dataset.targetLicense = result.license || '';
+  button.dataset.targetCreator = result.creator || '';
+  const credit = button.closest('.target-media')?.querySelector('.target-credit');
+  if (credit && result.source_url) {
+    credit.href = result.source_url;
+    credit.hidden = false;
+    credit.target = '_blank';
+    credit.rel = 'external noreferrer';
+  }
+}
+
+async function hydrateOneTargetImage(button, recommendations) {
+  const index = Number(button.dataset.targetIndex);
+  const target = recommendations?.[index];
+  if (!target || !targetCanHaveImage(target)) return;
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const existing = button.querySelector('img.target-thumb');
+  if (existing?.complete && existing.naturalWidth > 0) return;
+  button.classList.add('image-loading');
+  try {
+    const result = await resolveTargetImage(target, 384);
+    if (result) applyResolvedTargetImage(button, result);
+  } catch (_) {
+    // Keep the astronomy marker. A network failure is not cached as a permanent miss.
+  } finally {
+    button.classList.remove('image-loading');
+  }
+}
+
+function hydrateTargetImages(recommendations) {
+  const buttons = [...document.querySelectorAll('#target-list .target-thumb-button[data-target-index]')];
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < buttons.length) {
+      const button = buttons[cursor++];
+      await hydrateOneTargetImage(button, recommendations);
+    }
+  };
+  void Promise.all([worker(), worker()]);
+}
+
+function updateLightboxCredit(result, fallbackHref) {
+  const link = $('image-lightbox-credit');
+  const span = link.querySelector('span');
+  const href = result?.source_url || fallbackHref || '';
+  if (href) {
+    link.href = href;
+    link.hidden = false;
+    if (String(href).startsWith('https://')) { link.target = '_blank'; link.rel = 'external noreferrer'; }
+    else { link.removeAttribute('target'); link.removeAttribute('rel'); }
+  } else {
+    link.hidden = true;
+  }
+  if (span) span.textContent = result?.license ? `${result.license} · image source` : 'Image credit & licence';
+}
+
+async function improveTargetLightbox(button) {
+  const index = Number(button.dataset.targetIndex);
+  const target = currentSnapshot?.recommendations?.[index];
+  if (!target || !targetCanHaveImage(target)) return;
+  $('image-lightbox-meta').textContent = 'Looking for a clearer licensed image…';
+  try {
+    const result = await resolveTargetImage(target, 1280);
+    if (result && !$('image-lightbox').hidden && lastTargetImageTrigger === button) {
+      $('image-lightbox-image').src = result.objectUrl;
+      const details = [result.license, result.creator].filter(Boolean).join(' · ');
+      $('image-lightbox-meta').textContent = details || 'Higher-resolution image cached locally.';
+      updateLightboxCredit(result, button.dataset.targetCredit);
+    } else if (!$('image-lightbox').hidden && lastTargetImageTrigger === button) {
+      $('image-lightbox-meta').textContent = button.dataset.targetImage ? 'Showing the bundled or cached preview; no larger licensed image was found.' : 'No licensed image is available for this target.';
+    }
+  } catch (_) {
+    if (!$('image-lightbox').hidden && lastTargetImageTrigger === button) {
+      $('image-lightbox-meta').textContent = button.dataset.targetImage ? 'Showing the local preview. A clearer image could not be downloaded right now.' : 'Image lookup is unavailable right now.';
+    }
+  }
+}
+'''
+
+          marker = 'function sourceStatusKind(key, value, snapshot) {'
+          if marker not in ui:
+              raise SystemExit('UI insertion marker missing')
+          ui = ui.replace(marker, dynamic_js + '\n\n' + marker, 1)
+
+          start = ui.index('  function targetImageKey(r) {')
+          end = ui.index("\n\n  $('target-list').innerHTML", start)
+          ui = ui[:start] + ui[end:]
+          ui = ui.replace('${targetThumbnail(r)}', '${targetThumbnail(r, i)}', 1)
+          target_end = "): '<div class=\"muted\">No worthwhile targets cleared the current observing limits.</div>';\n\n  const detailedNights"
+          if target_end not in ui:
+              raise SystemExit('target list end marker missing')
+          ui = ui.replace(target_end, "): '<div class=\"muted\">No worthwhile targets cleared the current observing limits.</div>';\n  hydrateTargetImages(snapshot.recommendations);\n\n  const detailedNights", 1)
+
+          old_open = '''function openTargetImage(button) {
+  const src = button.dataset.targetImage;
+  if (!src) return;
+  lastTargetImageTrigger = button;
+  $('image-lightbox-image').src = src;
+  $('image-lightbox-image').alt = button.dataset.targetName || 'Astronomy target';
+  $('image-lightbox-caption').textContent = button.dataset.targetName || '';
+  const credit = button.dataset.targetCredit || '#';
+  $('image-lightbox-credit').href = credit;
+  $('image-lightbox-credit').hidden = !button.dataset.targetCredit;
+  $('image-lightbox').hidden = false;
+  document.body.classList.add('image-lightbox-open');
+  $('image-lightbox-close').focus();
+}'''
+          new_open = '''function openTargetImage(button) {
+  const src = button.dataset.targetImage || button.querySelector('img.target-thumb')?.src || '';
+  const index = Number(button.dataset.targetIndex);
+  const target = currentSnapshot?.recommendations?.[index];
+  if (!src && !targetCanHaveImage(target)) return;
+  lastTargetImageTrigger = button;
+  if (src) $('image-lightbox-image').src = src;
+  else $('image-lightbox-image').removeAttribute('src');
+  $('image-lightbox-image').alt = button.dataset.targetName || 'Astronomy target';
+  $('image-lightbox-caption').textContent = button.dataset.targetName || '';
+  $('image-lightbox-meta').textContent = src ? 'Opening local preview…' : 'Looking for a licensed image…';
+  updateLightboxCredit(null, button.dataset.targetCredit);
+  $('image-lightbox').hidden = false;
+  document.body.classList.add('image-lightbox-open');
+  $('image-lightbox-close').focus();
+  void improveTargetLightbox(button);
+}'''
+          if old_open not in ui:
+              raise SystemExit('openTargetImage block missing')
+          ui = ui.replace(old_open, new_open, 1)
+          ui = ui.replace(
+              "  $('image-lightbox-caption').textContent = '';\n  $('image-lightbox-credit').removeAttribute('href');",
+              "  $('image-lightbox-caption').textContent = '';\n  $('image-lightbox-meta').textContent = '';\n  $('image-lightbox-credit').removeAttribute('href');\n  $('image-lightbox-credit').removeAttribute('target');\n  $('image-lightbox-credit').removeAttribute('rel');\n  const creditSpan = $('image-lightbox-credit').querySelector('span');\n  if (creditSpan) creditSpan.textContent = 'Image credit & licence';",
+              1,
+          )
+          ui_path.write_text(ui, encoding='utf-8')
+
+          # Validators now protect the interactive cache and the larger local preview baseline.
+          validator = root / 'tests/validate_object_images.py'
+          text = validator.read_text(encoding='utf-8')
+          needle = '    require(\'position: absolute; right: 2px; bottom: 2px\' not in ui, "image credit must not overlay the thumbnail")\n'
+          addition = '''    for interactive_marker in [
+        "TARGET_IMAGE_DB",
+        "indexedDB.open",
+        "https://en.wikipedia.org/w/api.php",
+        "https://commons.wikimedia.org/w/api.php",
+        "allowedTargetImageLicense",
+        "hydrateTargetImages(snapshot.recommendations)",
+        "resolveTargetImage(target, 1280)",
+        'id="image-lightbox-meta"',
+    ]:
+        require(interactive_marker in ui, f"interactive target image marker missing: {interactive_marker}")
+    builder = (ROOT / "astronomy_observer" / "scripts" / "build_object_thumbnails.py").read_text(encoding="utf-8")
+    require("THUMB_MAX = 512" in builder, "bundled target previews must be built at 512px")
+'''
+          if needle not in text:
+              raise SystemExit('object image validator insertion marker missing')
+          validator.write_text(text.replace(needle, needle + addition, 1), encoding='utf-8')
+
+          # Documentation: keep the existing human-oriented structure and update only the target-image behaviour.
+          readme = root / 'README.md'
+          text = readme.read_text(encoding='utf-8')
+          text = text.replace(
+              '| **Offline object thumbnails** | Messier objects and selected familiar targets can show small bundled images with per-image licence and attribution data |',
+              '| **Recognisable targets, online or off** | Common objects ship with clearer local previews; missing target images can be fetched from Wikimedia Commons after licence verification and cached on the device |',
+              1,
+          )
+          text = text.replace(
+              'Astronomy Observer bundles compact target thumbnails for the Messier catalogue plus a limited set of familiar planets, the Moon, the Milky Way and major meteor showers.',
+              'Astronomy Observer starts with a bundled set of 512 px target previews for the Messier catalogue plus familiar planets, the Moon, the Milky Way and major meteor showers. That means the useful baseline still works offline.',
+              1,
+          )
+          old_para = 'Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. Tap or click a thumbnail to expand it for a proper look — especially useful on a phone — and close the full-screen view with the × button, the backdrop or Escape. The separate **i** credit control sits below the thumbnail so it does not compete with the image tap target. The credits page includes a clear return control in embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.'
+          new_para = 'Each accepted bundled thumbnail keeps its own source, creator, licence and attribution in the manifest and credits page. When an object in the current Top 10 has no bundled picture, Astronomy Observer can look it up through the Wikipedia/Wikimedia APIs, verify the same conservative licence allow-list, download it directly from Wikimedia Commons and cache it locally. This is especially useful for NGC/IC targets that were never practical to bundle in advance. A failed network request is not treated as a permanent miss.\n\nTap or click a thumbnail to open the full-screen view. The app asks for a substantially larger licensed image (up to about 1280 px) when online and caches it for later; if the network is unavailable, it simply keeps the clearer bundled/cached preview. The separate **i** control remains available for source and licence information, and dynamically downloaded images show their Commons source, creator and licence in the expanded view. If no acceptable image can be verified, the astronomy marker remains — the app never substitutes an unlicensed picture just to fill the space.'
+          if old_para not in text:
+              raise SystemExit('README image paragraph marker missing')
+          readme.write_text(text.replace(old_para, new_para, 1), encoding='utf-8')
+
+          third = root / 'THIRD_PARTY_LICENSES.md'
+          text = third.read_text(encoding='utf-8')
+          marker = 'The bundled copy is a reduced WebP thumbnail. `astronomy_observer/data/object_images/manifest.json` records the original Commons file, creator, licence, source URL and the thumbnail transformation. `object-images/credits.html` is shipped with Home Assistant, Docker/web and Android so those credits remain accessible from the target image itself.'
+          replacement = marker + '\n\nThe interactive target list may also resolve an image on demand when a recommended object has no bundled picture, or request a clearer copy when the image is expanded. This uses the same Wikimedia-only path and the same allow-list: Public Domain, CC0, CC BY and CC BY-SA are accepted; non-free, NC, ND, GFDL-only and unknown licences are rejected. The accepted file, creator, licence and source metadata are stored with the local browser/WebView cache. A dynamically downloaded image keeps its original Wikimedia licence and is not relicensed under PolyForm. The cache is an optional convenience layer; the bundled set remains the offline baseline.'
+          if marker not in text:
+              raise SystemExit('third-party image marker missing')
+          third.write_text(text.replace(marker, replacement, 1), encoding='utf-8')
+
+          for path in ['docs/ANDROID.md', 'docs/WEBAPP.md', 'astronomy_observer/DOCS.md']:
+              p = root / path
+              text = p.read_text(encoding='utf-8')
+              anchor = 'Wikimedia Commons'
+              if anchor not in text:
+                  # Append a small self-contained note rather than forcing unrelated prose changes.
+                  text += '\n\n## Target pictures\n\nCommon observing targets include licensed local previews. When online, the target list can also request a missing or clearer picture from Wikimedia Commons, verify its per-file licence, and cache the accepted image locally. Only Public Domain, CC0, CC BY and CC BY-SA images are accepted. If the lookup fails or the licence is unsuitable, the normal astronomy marker remains.\n'
+              else:
+                  text += '\n\n### Interactive target-picture cache\n\nThe bundled target previews are the offline baseline. For a recommended object without a bundled image, or when a clearer expanded view is requested, Astronomy Observer can query Wikipedia/Wikimedia directly, accept only Public Domain/CC0/CC BY/CC BY-SA files, and cache the verified result locally. Network failures do not remove the local preview and unsuitable licences are never displayed.\n'
+              p.write_text(text, encoding='utf-8')
+
+          changelog = root / 'astronomy_observer/CHANGELOG.md'
+          text = changelog.read_text(encoding='utf-8')
+          heading = '# Changelog\n'
+          section = '''# Changelog
+
+## 0.3.4
+
+- Increased bundled object previews from 192 px to 512 px so the offline expanded view is materially clearer.
+- Added an interactive on-demand image path for recommended targets that have no bundled picture, including useful NGC/IC objects.
+- Missing or clearer target pictures are resolved through Wikipedia/Wikimedia APIs, checked against the existing conservative licence allow-list, downloaded directly from Wikimedia Commons and cached locally in the browser/WebView.
+- Expanded images can use a cached/downloaded copy up to about 1280 px while preserving the bundled image as the offline fallback.
+- Dynamic image attribution, creator and licence information is kept visible; unlicensed or unknown images are rejected rather than substituted.
+'''
+          if not text.startswith(heading):
+              raise SystemExit('unexpected changelog heading')
+          changelog.write_text(section + text[len(heading):].lstrip('\n'), encoding='utf-8')
+          PY
+
+      - name: Rebuild licensed bundled object previews at 512px
+        run: python astronomy_observer/scripts/build_object_thumbnails.py
+
+      - name: Validate changed source before commit
+        run: |
+          python tests/validate_object_images.py
+          python tests/validate_repository.py
+          python webapp/validate.py
+          python android/validate.py
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('astronomy_observer/web/index.html').read_text(encoding='utf-8')
+          start = html.rfind('<script>') + len('<script>')
+          end = html.rfind('</script>')
+          Path('/tmp/astronomy-observer-ui.js').write_text(html[start:end], encoding='utf-8')
+          PY
+          node --check /tmp/astronomy-observer-ui.js
+
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/apply-target-image-cache-once.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Improve target image clarity and on-demand cache"
+          git push origin HEAD:main
