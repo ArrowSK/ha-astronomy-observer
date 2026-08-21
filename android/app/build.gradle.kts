@@ -11,8 +11,8 @@ android {
         applicationId = "com.arrowsk.astronomyobserver"
         minSdk = 28
         targetSdk = 36
-        versionCode = 30300
-        versionName = "0.3.3"
+        versionCode = 30400
+        versionName = "0.3.4"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
