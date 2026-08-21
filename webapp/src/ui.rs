@@ -63,6 +63,18 @@ pub fn web_index() -> AppResult<String> {
         ));
     }
     html = html.replacen(old_tail, WEB_SCRIPT, 1);
+
+    let body_end = "</body>";
+    if !html.contains(body_end) {
+        return Err(err(
+            "shared interface body marker changed; update the target image adapter",
+        ));
+    }
+    html = html.replacen(
+        body_end,
+        "<script src=\"target-images.js?v=0.3.4\"></script>\n</body>",
+        1,
+    );
     Ok(html)
 }
 
@@ -76,5 +88,6 @@ mod tests {
         assert!(html.contains("web-location-lat"));
         assert!(html.contains("api/web/snapshot"));
         assert!(html.contains("<span>Forecast</span>"));
+        assert!(html.contains("target-images.js?v=0.3.4"));
     }
 }
