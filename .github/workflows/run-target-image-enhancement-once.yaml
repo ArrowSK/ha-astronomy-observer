@@ -1,0 +1,53 @@
+name: Run target image enhancement once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/run-target-image-enhancement-once.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run prepared enhancement workflow
+        run: |
+          python -m pip install --disable-pip-version-check pillow pyyaml
+          python - <<'PY'
+          import subprocess
+          from pathlib import Path
+          import yaml
+
+          workflow = yaml.safe_load(Path('.github/workflows/apply-target-image-cache-once.yaml').read_text(encoding='utf-8'))
+          steps = workflow['jobs']['apply']['steps']
+          wanted = {
+              'Apply UI, cache, version and documentation changes',
+              'Rebuild licensed bundled object previews at 512px',
+              'Validate changed source before commit',
+              'Remove one-time workflow and commit',
+          }
+          for step in steps:
+              name = step.get('name')
+              if name not in wanted:
+                  continue
+              script = step.get('run', '')
+              if name == 'Remove one-time workflow and commit':
+                  script = 'rm .github/workflows/run-target-image-enhancement-once.yaml\n' + script
+              print(f'::group::{name}')
+              subprocess.run(['bash', '-euo', 'pipefail', '-c', script], check=True)
+              print('::endgroup::')
+          PY
