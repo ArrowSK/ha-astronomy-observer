@@ -14,7 +14,7 @@
   <a href="https://github.com/ArrowSK/ha-astronomy-observer/actions/workflows/android.yaml"><img src="https://github.com/ArrowSK/ha-astronomy-observer/actions/workflows/android.yaml/badge.svg?branch=main" alt="Android APK build"></a>
   <img src="https://img.shields.io/badge/Home%20Assistant-App-41BDF5?logo=home-assistant&logoColor=white" alt="Home Assistant app">
   <img src="https://img.shields.io/badge/Android-Standalone-3DDC84?logo=android&logoColor=white" alt="Standalone Android">
-  <img src="https://img.shields.io/badge/Docker-Standalone-2496ED?logo=docker&logoColor=white" alt="Docker standalone">
+  <img src="https://img.shields.io/badge/Docker-Standalone-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker standalone">
   <img src="https://img.shields.io/badge/License-PolyForm%20Noncommercial-6f42c1" alt="PolyForm Noncommercial license">
 </p>
 
@@ -49,12 +49,12 @@ Astronomy Observer is built for the question an ordinary weather app does not re
 | **Targets ranked for your sky** | Altitude, local horizon, Moon separation, sky brightness, object type and configured equipment all matter |
 | **Seven-night forecast** | Compare upcoming nights with the same scoring logic instead of guessing from cloud icons |
 | **Readable evidence** | Condition rows expand to explain how each value is derived; unknown inputs stay unknown rather than being invented |
-| **Offline object thumbnails** | Messier objects and selected familiar targets can show small bundled images with per-image licence and attribution data |
+| **Lean target pictures** | Common objects keep compact bundled previews; Home Assistant/web can optionally fetch clearer or missing licence-verified Wikimedia previews on demand |
 | **Built-in light pollution** | A compact World Atlas derivative follows the observing location automatically and already affects darkness-sensitive scoring |
 
 No Astronomy Observer account is required. There is no project telemetry service, analytics SDK, advertising service, paid astronomy API requirement or project-operated cloud backend. Changing public data are fetched from their documented providers; core astronomy, catalogues, scoring and bundled light-pollution data stay with the installed application.
 
-> **Current release: 0.3.3.** Astronomy Observer is still marked experimental, but the same core is now exercised through Home Assistant, standalone Docker/web and a fully standalone Android build.
+> **Current release: 0.3.4.** Astronomy Observer is still marked experimental, but the same core is now exercised through Home Assistant, standalone Docker/web and a fully standalone Android build.
 
 ## Choose how to run it
 
@@ -141,13 +141,15 @@ Depending on source availability, the current planner can use:
 
 The scoring model is deterministic and does not depend on a remote scoring or news-sentiment service.
 
-## Recognisable targets, without a remote image service
+## Recognisable targets, with a lean online enhancement
 
-Astronomy Observer bundles compact target thumbnails for the Messier catalogue plus a limited set of familiar planets, the Moon, the Milky Way and major meteor showers.
+Astronomy Observer keeps the compact bundled target thumbnails for the Messier catalogue plus a limited set of familiar planets, the Moon, the Milky Way and major meteor showers. Those files remain the offline baseline and are deliberately not enlarged just to improve the full-screen view.
 
-The image set is intentionally conservative. The builder first requests a representative free image and then verifies the corresponding Wikimedia Commons licence metadata. Only Public Domain, CC0, CC BY and CC BY-SA files are accepted. Fair-use/non-free, NonCommercial, NoDerivatives, GFDL-only and unknown licences are rejected.
+The bundled image set is intentionally conservative. The builder first requests a representative free image and then verifies the corresponding Wikimedia Commons licence metadata. Only Public Domain, CC0, CC BY and CC BY-SA files are accepted. Fair-use/non-free, NonCommercial, NoDerivatives, GFDL-only and unknown licences are rejected.
 
-Each accepted thumbnail keeps its own source, creator, licence and attribution in the bundled manifest and credits page. Tap or click a thumbnail to expand it for a proper look — especially useful on a phone — and close the full-screen view with the × button, the backdrop or Escape. The separate **i** credit control sits below the thumbnail so it does not compete with the image tap target. The credits page includes a clear return control in embedded views, while external source and licence links open separately. If a target has no accepted image, the interface simply falls back to the normal astronomy marker.
+In Home Assistant and standalone web, opening a target can request a substantially clearer Wikimedia Commons preview using that same licence allow-list. Targets that previously had only the generic astronomy marker — particularly NGC/IC/deep-sky objects, comets and the ISS — can also request a small preview on demand. The lookup sends the target title or image filename, not the observing location, keeps concurrent thumbnail lookups bounded, uses the browser's normal HTTP cache, and never affects target ranking. If the network lookup fails or a licence cannot be verified, the existing local thumbnail or generic marker simply remains.
+
+Tap or click a target image to expand it and close the full-screen view with the × button, the backdrop or Escape. The separate **i** credit control remains available for source and licence information. The Android edition intentionally keeps its embedded WebView local-only, so it continues to use bundled previews and the normal fallback marker without remote image lookup.
 
 [Object-image licence details →](THIRD_PARTY_LICENSES.md#wikimedia-commons-object-thumbnails)
 
@@ -171,7 +173,7 @@ Astronomy Observer does **not** send usage data to ArrowSK, GitHub or a project-
 
 Exact location is used locally for astronomy calculations. External provider queries use the configured coordinate precision rather than deliberately sending more location precision than needed. Android talks directly to the public providers it needs; standalone web does the same; Home Assistant additionally talks to Home Assistant's internal APIs for the integrations you explicitly enable.
 
-Core astronomy calculations, target catalogues, meteor data, light-pollution data, the web interface and object thumbnails ship with the installed release. A running Android app or container does not need this GitHub repository to remain online for those local capabilities to continue working.
+Core astronomy calculations, target catalogues, meteor data, light-pollution data, the web interface and bundled object thumbnails ship with the installed release. A running Android app or container does not need this GitHub repository to remain online for those local capabilities to continue working. Optional target-picture enhancement in Home Assistant/web is an additional convenience rather than a core runtime dependency.
 
 If you expose the standalone web app publicly, put it behind an authenticated reverse proxy or another access-control layer; the standalone container does not add user authentication by itself.
 
